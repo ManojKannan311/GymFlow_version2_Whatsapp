@@ -1,0 +1,884 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<div class="container-fluid py-3 profile-page">
+
+    <style>
+        .profile-page {
+            --card-radius: 18px;
+            --soft-border: #e9edf3;
+            --soft-bg: #f7f9fc;
+            --text-muted-soft: #6b7280;
+        }
+
+        .profile-page .page-card,
+        .profile-page .section-card,
+        .profile-page .mini-card {
+            border: 1px solid var(--soft-border);
+            border-radius: var(--card-radius);
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+            background: #fff;
+        }
+
+        .profile-page .page-card .card-body,
+        .profile-page .section-card .card-body,
+        .profile-page .mini-card .card-body {
+            padding: 1.25rem 1.35rem;
+        }
+
+        .profile-page .page-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: .15rem;
+            color: #0f172a;
+        }
+
+        .profile-page .page-subtitle,
+        .profile-page .section-subtitle {
+            color: var(--text-muted-soft);
+        }
+
+        .profile-page .section-heading {
+            font-size: .85rem;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #64748b;
+            margin-bottom: 0;
+        }
+
+        .profile-page .section-divider {
+            margin: .85rem 0 1rem;
+            opacity: .7;
+        }
+
+        .profile-page .table {
+            --bs-table-bg: transparent;
+            margin-bottom: 0;
+        }
+
+        .profile-page .table thead th {
+            font-weight: 700;
+            color: #475569;
+            border-bottom: 1px solid #e5e7eb;
+            white-space: nowrap;
+            background: #fbfcfe;
+        }
+
+        .profile-page .table td,
+        .profile-page .table th {
+            vertical-align: middle;
+            padding-top: .9rem;
+            padding-bottom: .9rem;
+        }
+
+        .profile-page .table tbody tr:hover {
+            background: #fafcff;
+        }
+
+        .profile-page .badge-soft-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .profile-page .badge-soft-secondary {
+            background: #eef2f7;
+            color: #475569;
+            border: 1px solid #dbe3ec;
+        }
+
+        .profile-page .top-actions .btn,
+        .profile-page .section-actions .btn {
+            border-radius: 12px;
+        }
+
+        .profile-page .btn {
+            border-radius: 12px;
+        }
+
+        .profile-page .form-control,
+        .profile-page .form-select {
+            border-radius: 12px;
+            min-height: 44px;
+        }
+
+        .profile-page .info-strip {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: .55rem .85rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .profile-page .table-actions {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+
+        .profile-page .table-actions .btn {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .profile-page .settings-box {
+            background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+        }
+
+        .profile-page .invoice-current {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: .85rem 1rem;
+        }
+
+        .profile-page .modal-content {
+            border-radius: 18px;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, .16);
+        }
+
+        .profile-page .modal-header,
+        .profile-page .modal-footer {
+            border-color: #eef2f7;
+        }
+
+        .profile-page .alert {
+            border-radius: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .profile-page .page-title {
+                font-size: 1.45rem;
+            }
+
+            .profile-page .top-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 1rem;
+            }
+
+            .profile-page .top-actions {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                gap: .75rem;
+            }
+
+            .profile-page .top-actions .btn,
+            .profile-page .top-actions .info-strip {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+
+    <div id="alertArea" class="mb-3"></div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm mb-3" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Top Header -->
+    <div class="card page-card mb-4 mt-2">
+        <div class="card-body d-flex justify-content-between align-items-center top-header">
+            <div>
+                <div class="page-title">Gym Profile</div>
+                <div class="page-subtitle">Manage your gym profile, branches, trainers, and invoice settings.</div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2 flex-wrap top-actions">
+                <div class="info-strip">
+                    <i class="bi bi-building"></i>
+                    <span>{{ gym.name }}</span>
+                </div>
+
+                <a href="{% url 'download_full_backup' %}"
+                   class="btn btn-primary"
+                   onclick="return confirm('Download full backup now?');">
+                    <i class="bi bi-download me-1"></i> Backup
+                </a>
+
+                <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#ownerResetPwdModal">
+                    <i class="bi bi-key me-1"></i> Change Password
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Branches -->
+        {% if request.user.gym.plan_type == "multi" %}
+        <div class="col-12">
+            <div class="card section-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h6 class="section-heading">Branches</h6>
+                            <div class="section-subtitle small">Manage all branches under this gym.</div>
+                        </div>
+
+                        <div class="section-actions">
+                            <button class="btn btn-outline-primary btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#addBranchModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add Branch
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr class="section-divider">
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width:70px;">#</th>
+                                    <th>Branch</th>
+                                    <th>Phone</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for b in branches %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td class="fw-semibold">{{ b.name }}</td>
+                                    <td>{{ b.phone|default:"-" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">No branches added yet</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Trainers -->
+        <div class="col-12">
+            <div class="card section-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <h6 class="section-heading">Trainers</h6>
+                            <div class="section-subtitle small">Create trainer accounts, assign branches, and control access.</div>
+                        </div>
+
+                        <div class="section-actions">
+                            <button class="btn btn-outline-primary btn-sm"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#addTrainerModal">
+                                <i class="bi bi-plus-lg me-1"></i> Add Trainer
+                            </button>
+                        </div>
+                    </div>
+
+                    <hr class="section-divider">
+
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Trainer</th>
+                                    <th>Username</th>
+                                    <th>Phone</th>
+                                    <th>Branch</th>
+                                    <th style="min-width:220px;">Assign</th>
+                                    <th>Status</th>
+                                    <th style="min-width:160px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for t in trainers %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+
+                                    <td class="fw-semibold">
+                                        {% if t.first_name %}
+                                            {{ t.first_name }}
+                                        {% else %}
+                                            {{ t.username }}
+                                        {% endif %}
+                                    </td>
+
+                                    <td>{{ t.username }}</td>
+                                    <td>{{ t.phone|default:"-" }}</td>
+
+                                    <td>
+                                        {% if t.branch %}
+                                            {{ t.branch.name }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        <select class="form-select form-select-sm trainer-branch py-2"
+                                                data-trainer-id="{{ t.id }}">
+                                            <option value="">No branch</option>
+                                            {% for b in branches %}
+                                                <option value="{{ b.id }}" {% if t.branch_id == b.id %}selected{% endif %}>
+                                                    {{ b.name }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+
+                                    <td>
+                                        {% if t.is_active %}
+                                            <span class="badge badge-soft-success rounded-pill px-3 py-2">Active</span>
+                                        {% else %}
+                                            <span class="badge badge-soft-secondary rounded-pill px-3 py-2">Inactive</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td>
+                                        <div class="table-actions">
+                                            <button type="button"
+                                                    class="btn btn-outline-warning btn-sm"
+                                                    onclick="toggleTrainer('{{ t.id }}')"
+                                                    title="{% if t.is_active %}Deactivate{% else %}Activate{% endif %}">
+                                                {% if t.is_active %}
+                                                    <i class="bi bi-pause-circle"></i>
+                                                {% else %}
+                                                    <i class="bi bi-play-circle"></i>
+                                                {% endif %}
+                                            </button>
+
+                                            <button class="btn btn-warning btn-sm"
+                                                    onclick="openResetPassword('{{ t.id }}')"
+                                                    title="Reset Password">
+                                                <i class="bi bi-key"></i>
+                                            </button>
+
+                                            <button type="button"
+                                                    class="btn btn-outline-danger btn-sm"
+                                                    onclick="deleteTrainer('{{ t.id }}')"
+                                                    title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4 text-muted">No trainers found</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoice Settings -->
+        <div class="col-12">
+            <div class="card section-card settings-box">
+                <div class="card-body">
+                    <div>
+                        <h6 class="section-heading">Invoice Settings</h6>
+                        <div class="section-subtitle small">Set your invoice prefix, running number, and padding format.</div>
+                    </div>
+
+                    <hr class="section-divider">
+
+                    <form method="post" action="{% url 'invoice_settings' %}">
+                        {% csrf_token %}
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Prefix</label>
+                                <input class="form-control" name="prefix" value="{{ settings.prefix }}" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Next Invoice Number</label>
+                                <input class="form-control" type="number" name="next_number" value="{{ settings.next_number }}" required>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Padding (digits)</label>
+                                <input class="form-control" type="number" name="padding" value="{{ settings.padding }}" required>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mt-4">
+                            <button class="btn btn-primary px-4">Save Settings</button>
+
+                            <div class="invoice-current small">
+                                Current Invoice:
+                                <strong>{{ invoice_setting.prefix }}-{{ invoice_setting.next_number|stringformat:"04d" }}</strong>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- OWNER PASSWORD MODAL -->
+<div class="modal fade" id="ownerResetPwdModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Change Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label small text-muted">New Password</label>
+                    <input type="password" id="op_new_password" class="form-control" minlength="6"
+                           placeholder="Enter new password (min 6 chars)">
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label small text-muted">Confirm Password</label>
+                    <input type="password" id="op_confirm_password" class="form-control" minlength="6"
+                           placeholder="Confirm new password">
+                </div>
+
+                <div class="alert alert-danger d-none mt-3" id="op_error"></div>
+                <div class="alert alert-success d-none mt-3" id="op_success">Password updated ✅</div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="op_save_btn">Save</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- STAFF PASSWORD MODAL -->
+<div class="modal fade" id="resetPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Reset Password</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="reset_user_id">
+
+                <label class="form-label">New Password</label>
+                <input type="password" id="new_password" class="form-control" placeholder="Enter new password">
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="submitPasswordReset()">
+                    Reset Password
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add Branch Modal -->
+<div class="modal fade" id="addBranchModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Add Branch</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form id="addBranchForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Branch Name *</label>
+                        <input class="form-control" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input class="form-control" name="phone">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Address</label>
+                        <textarea class="form-control" name="address" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="submit">Save</button>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add Trainer Modal -->
+<div class="modal fade" id="addTrainerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Add Trainer</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form id="addTrainerForm">
+                <div class="modal-body">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Trainer Name *</label>
+                            <input class="form-control" name="name" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Phone</label>
+                            <input class="form-control" name="phone" placeholder="optional">
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label class="form-label">Username *</label>
+                            <input class="form-control" name="username" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Password *</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label">Assign Branch (optional)</label>
+                        <select class="form-select" name="branch_id">
+                            <option value="">Select branch</option>
+                            {% for b in branches %}
+                                <option value="{{ b.id }}">{{ b.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info small mt-3 mb-0">
+                        Trainer login will be created using username & password.
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button class="btn btn-primary" type="submit">Save</button>
+                    <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<!-- Edit Trainer Modal -->
+<div class="modal fade" id="editTrainerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Trainer</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form id="editTrainerForm">
+                <div class="modal-body">
+
+                    <input type="hidden" id="edit_trainer_id" name="trainer_id">
+
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <input type="text" id="edit_name" name="name" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" id="edit_username" name="username" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="text" id="edit_phone" name="phone" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Branch</label>
+                        <select id="edit_branch" name="branch_id" class="form-select">
+                            <option value="">No branch</option>
+                            {% for b in branches %}
+                                <option value="{{ b.id }}">{{ b.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="edit_active" name="is_active">
+                        <label class="form-check-label">Active</label>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    $("#op_save_btn").on("click", function () {
+        const pw = $("#op_new_password").val().trim();
+        const cpw = $("#op_confirm_password").val().trim();
+        const csrf = $("input[name=csrfmiddlewaretoken]").val();
+
+        $("#op_error").addClass("d-none").text("");
+        $("#op_success").addClass("d-none");
+
+        if (!pw || !cpw) {
+            $("#op_error").removeClass("d-none").text("Please enter both password fields");
+            return;
+        }
+
+        if (pw.length < 6) {
+            $("#op_error").removeClass("d-none").text("Password must be at least 6 characters");
+            return;
+        }
+
+        if (pw !== cpw) {
+            $("#op_error").removeClass("d-none").text("New Password and Confirm Password must match");
+            $("#op_confirm_password").addClass("is-invalid");
+            return;
+        } else {
+            $("#op_confirm_password").removeClass("is-invalid");
+        }
+
+        $.ajax({
+            url: "{% url 'owner_reset_password' %}",
+            type: "POST",
+            data: {
+                password: pw,
+                confirm_password: cpw,
+                csrfmiddlewaretoken: csrf
+            },
+            success: function (res) {
+                if (res.success) {
+                    $("#op_success").removeClass("d-none").text("Password updated successfully");
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById("ownerResetPwdModal"));
+                        if (modal) modal.hide();
+                        window.location.reload();
+                    }, 800);
+                } else {
+                    $("#op_error").removeClass("d-none").text(res.error || "Failed");
+                }
+            },
+            error: function (xhr) {
+                $("#op_error").removeClass("d-none").text(xhr.responseJSON?.error || "Failed");
+            }
+        });
+    });
+
+    function openResetPassword(userId) {
+        $("#reset_user_id").val(userId);
+        new bootstrap.Modal(document.getElementById("resetPasswordModal")).show();
+    }
+
+    function submitPasswordReset() {
+        const userId = $("#reset_user_id").val();
+        const password = $("#new_password").val();
+
+        $.ajax({
+            url: `/users/${userId}/reset-password/`,
+            type: "POST",
+            data: {
+                password: password,
+                csrfmiddlewaretoken: $("input[name=csrfmiddlewaretoken]").val()
+            },
+            success: function(res){
+                if(res.success){
+                    alert("Password reset successfully");
+                    location.reload();
+                } else {
+                    alert(res.error);
+                }
+            }
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + "=")) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    const csrftoken = getCookie("csrftoken");
+
+    $("#addBranchForm").on("submit", function(e){
+        e.preventDefault();
+
+        $.ajax({
+            url: "{% url 'create_branch' %}",
+            type: "POST",
+            data: $(this).serialize(),
+            headers: {"X-CSRFToken": csrftoken},
+            success: function(res){
+                if (res.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("addBranchModal"));
+                    modal.hide();
+                    $("#addBranchForm")[0].reset();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    showAlert("Branch created successfully ✅", "success");
+                    setTimeout(function(){
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showAlert(res.message || "Error", "danger");
+                }
+            }
+        });
+    });
+
+    $("#addTrainerForm").on("submit", function(e){
+        e.preventDefault();
+
+        $.ajax({
+            url: "{% url 'create_trainer' %}",
+            type: "POST",
+            data: $(this).serialize(),
+            headers: {"X-CSRFToken": csrftoken},
+            success: function(res){
+                if (res.success) {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById("addTrainerModal"));
+                    modal.hide();
+                    $("#addTrainerForm")[0].reset();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    showAlert("Trainer created successfully ✅", "success");
+                    setTimeout(function(){
+                        location.reload();
+                    }, 2000);
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    showAlert(res.message || "Error", "danger");
+                }
+            }
+        });
+    });
+
+    $(".trainer-branch").on("change", function(){
+        const trainerId = $(this).data("trainer-id");
+        const branchId = $(this).val();
+
+        $.ajax({
+            url: `/profile/trainer/${trainerId}/assign-branch/`,
+            type: "POST",
+            data: {branch_id: branchId},
+            headers: {"X-CSRFToken": csrftoken},
+            success: function(res){
+                if(!res.success) {
+                    alert(res.message || "Failed to assign");
+                } else {
+                    location.reload();
+                }
+            }
+        });
+    });
+
+    function showAlert(message, type="success") {
+        const alertHtml = `
+          <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        `;
+        $("#alertArea").html(alertHtml);
+
+        setTimeout(function () {
+            $(".alert").slideUp("slow", function () {
+                $(this).alert('close');
+            });
+        }, 4000);
+    }
+
+    function toggleTrainer(trainerId){
+        $.ajax({
+            url: `/profile/trainer/${trainerId}/toggle/`,
+            type: "POST",
+            headers: {"X-CSRFToken": csrftoken},
+            success: function(res){
+                if(res.success){
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    showAlert("Trainer status updated ✅", "success");
+                    setTimeout(()=>location.reload(), 1500);
+                } else {
+                    showAlert(res.message || "Error", "danger");
+                }
+            }
+        });
+    }
+
+    function deleteTrainer(trainerId){
+        if(!confirm("Delete this trainer once deleted no retrieve !!")) return;
+
+        $.ajax({
+            url: `/profile/trainer/${trainerId}/delete/`,
+            type: "POST",
+            headers: {"X-CSRFToken": csrftoken},
+            success: function(res){
+                if(res.success){
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    showAlert("Trainer deleted ✅", "success");
+                    setTimeout(()=>location.reload(), 1500);
+                } else {
+                    showAlert(res.message || "Error", "danger");
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

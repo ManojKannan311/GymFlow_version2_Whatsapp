@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid">
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm mt-3"
+        role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+    <!-- Page Header -->
+    <div class="card shadow-sm mb-4 mt-3">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="mb-0">WhatsApp Configuration</h5>
+                <small class="text-muted">Configure automated renewal reminders.</small>
+            </div>
+
+            <span class="fw-semibold text-primary">
+                {{ request.user.gym.name }}
+            </span>
+        </div>
+    </div>
+
+    {% if request.user.gym.subscription_type == "pro" %}
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <!-- Enable WhatsApp -->
+                <div class="form-check form-switch mb-4">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="interakt_enabled"
+                           id="interakt_enabled"
+                           {% if gym.interakt_enabled %}checked{% endif %}>
+
+                    <label class="form-check-label fw-semibold" for="interakt_enabled">
+                        Enable WhatsApp Automation
+                    </label>
+
+                    <div class="text-muted small">
+                        Send automatic expiry reminders to members.
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Interakt API Key -->
+                <h5 class="mb-3">Interakt API Settings</h5>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">
+                            Interakt API Key
+                        </label>
+
+                        <input type="password"
+                               name="interakt_api_key"
+                               class="form-control"
+                               placeholder="Enter your Interakt API key"
+                               value="{{ gym.interakt_api_key }}">
+
+                        <small class="text-muted">
+                            Get this from your Interakt dashboard → Developer Settings
+                        </small>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Templates -->
+                <h5 class="mb-3">WhatsApp Templates</h5>
+
+                <div class="row">
+
+                    <!-- Expiring Soon -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">
+                            Expiring Soon Template
+                        </label>
+
+                        <input type="text"
+                               name="wa_template_expiring_soon"
+                               class="form-control"
+                               placeholder="membership_expiring_soon"
+                               value="{{ gym.wa_template_expiring_soon }}">
+                    </div>
+
+                    <!-- Expiring Today -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">
+                            Expiring Today Template
+                        </label>
+
+                        <input type="text"
+                               name="wa_template_expires_today"
+                               class="form-control"
+                               placeholder="membership_expires_today"
+                               value="{{ gym.wa_template_expires_today }}">
+                    </div>
+
+                    <!-- Expired -->
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">
+                            Expired Template
+                        </label>
+
+                        <input type="text"
+                               name="wa_template_expired"
+                               class="form-control"
+                               placeholder="membership_expired"
+                               value="{{ gym.wa_template_expired }}">
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">
+                            Birthday Template
+                        </label>
+
+                        <input type="text"
+                               name="wa_template_birthday"
+                               class="form-control"
+                               placeholder="membership_expired"
+                               value="{{ gym.wa_template_birthday }}">
+                    </div>
+
+                    
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Birthday On Template 
+                        </label>
+                
+                        <input type="text"
+                               name="wa_template_birthday_today"
+                               class="form-control"
+                               value="{{ gym.wa_template_birthday_today }}">
+                    </div>
+
+                </div>
+
+                <hr>
+
+                <!-- Reminder Days -->
+                <h5 class="mb-3">Reminder & Auto archive Settings</h5>
+
+                <div class="row g-3">
+
+                    <!-- Expiry Reminder -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Reminder Days Before Expiry
+                        </label>
+                
+                        <input type="number"
+                               name="expiry_reminder_days_before"
+                               class="form-control"
+                               value="{{ gym.expiry_reminder_days_before|default:7 }}">
+                    </div>
+                
+                    <!-- Auto Archive Days -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Auto Archive After (Days)
+                        </label>
+                
+                        <input type="number"
+                               name="Auto_archive_In"
+                               class="form-control"
+                               value="{{ gym.Auto_archive_In|default:30 }}">
+                    </div>
+                
+                    <!-- Enable Auto Archive -->
+                    <div class="col-md-4 d-flex align-items-end">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   name="Auto_archive_enable"
+                                   id="Auto_archive_enable"
+                                   {% if gym.Auto_archive_enable %}checked{% endif %}>
+                
+                            <label class="form-check-label fw-semibold" for="Auto_archive_enable">
+                                Enable Auto Archive
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-semibold">
+                            Birthday Remainder Before 
+                        </label>
+
+                        <input type="number"
+                               name="birthday_reminder_days_before"
+                               class="form-control"
+                               placeholder="membership_expired"
+                               value="{{ gym.birthday_reminder_days_before }}">
+                    </div>
+                    
+                
+                </div>
+                
+
+                <hr>
+
+                <!-- Save Button -->
+                <button class="btn btn-primary">
+                    Save WhatsApp Settings
+                </button>
+
+            </form>
+
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+<script>
+    $(document).ready(function () {
+
+        setTimeout(function () {
+            
+            $(".alert").slideUp("slow", function () {
+                $(this).alert('close');   // fully remove from DOM
+            });
+        }, 3000); // 5000ms = 5 sec
+
+    });
+</script>
+
+{% endblock %}
