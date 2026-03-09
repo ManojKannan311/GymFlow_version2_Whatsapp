@@ -13,7 +13,7 @@ def download_full_backup(request):
     if request.user.role not in ["ADMIN", "OWNER"]:
         return HttpResponse("Not allowed", status=403)
 
-    from .models import Gym, Branch, MembershipPlan, Member, Payment,Enquiry
+    from .models import Gym, Branch, MembershipPlan, Member, Payment,Enquiry , WhatsAppMessageLog,InvoiceSettings,WhatsAppLog
 
     # ✅ Collect all objects
     all_objs = (
@@ -23,6 +23,10 @@ def download_full_backup(request):
         + list(Member.objects.filter(gym=gym))
         + list(Payment.objects.filter(gym=gym))
         + list(Enquiry.objects.filter(gym=gym))
+        + list(WhatsAppMessageLog.objects.filter(gym=gym))
+        + list(InvoiceSettings.objects.filter(gym=gym))
+        + list(WhatsAppLog.objects.filter(gym=gym))
+        
     )
 
     # ✅ Create proper Django fixture
