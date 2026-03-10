@@ -437,8 +437,50 @@
             </div>
         </div>
 
+        <div class="col-12">
+            <div class="card section-card settings-box">
+                <div class="card-body">
+        
+                    <div>
+                        <h6 class="section-heading">Bulk Upload</h6>
+                        <div class="section-subtitle small">Customer Data Sets</div>
+                    </div>
+        
+                    <form method="post"
+                          action="{% url 'preview_members_excel' %}"
+                          enctype="multipart/form-data">
+        
+                        {% csrf_token %}
+        
+                        <div class="row g-3">
+        
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Excel File</label>
+        
+                                <input type="file"
+                                       class="form-control"
+                                       name="excel_file"
+                                       accept=".xlsx,.xls"
+                                       required>
+                            </div>
+        
+                        </div>
+        
+                        <button type="submit" class="btn btn-primary px-4 mt-3">
+                            Upload Excel
+                        </button>
+        
+                    </form>
+        
+                </div>
+            </div>
+        </div>
+
+
     </div>
 </div>
+
+
 
 <!-- OWNER PASSWORD MODAL -->
 <div class="modal fade" id="ownerResetPwdModal" tabindex="-1" aria-hidden="true">

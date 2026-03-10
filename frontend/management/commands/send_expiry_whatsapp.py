@@ -9,7 +9,7 @@ from frontend.utils import (
     already_sent_today,
     get_next_birthday,
 )
-from views import can_use_whatsapp
+from frontend.views import can_use_whatsapp
 
 class Command(BaseCommand):
     help = "Send WhatsApp reminders for expiry and birthdays"

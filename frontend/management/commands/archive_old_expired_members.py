@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from frontend.models import Member  # change app name if needed
-from models import Gym
+from frontend.models import Gym
 
 class Command(BaseCommand):
     help = "Automatically archive expired members based on each gym's auto-archive settings"
@@ -12,7 +12,7 @@ class Command(BaseCommand):
         today = timezone.localdate()
         total_archived = 0
 
-        gyms = Gym.objects.filter(auto_archive_enable=True)
+        gyms = Gym.objects.filter(Auto_archive_enable=True)
 
         if not gyms.exists():
             self.stdout.write(self.style.WARNING("No gyms have auto archive enabled."))

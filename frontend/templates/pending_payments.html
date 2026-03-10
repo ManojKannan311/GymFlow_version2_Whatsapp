@@ -527,6 +527,66 @@
 
 
 <script>
+
+
+  //css
+ 
+  document.addEventListener("DOMContentLoaded", function () {
+    let activeMenu = null;
+  
+    document.querySelectorAll(".action-dropdown").forEach(function (dropdown) {
+      const button = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+      const menu = dropdown.querySelector(".action-dropdown-menu");
+  
+      if (!button || !menu) return;
+  
+      dropdown.addEventListener("show.bs.dropdown", function () {
+        activeMenu = menu;
+  
+        // Move menu to body
+        document.body.appendChild(menu);
+        menu.classList.add("floating-menu", "show");
+  
+        const rect = button.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth;
+        const menuHeight = menu.offsetHeight;
+  
+        let top = rect.bottom + window.scrollY + 4;
+        let left = rect.right - menuWidth;
+  
+        // Prevent offscreen
+        if (left < 4) left = 4;
+        if (top + menuHeight > window.innerHeight + window.scrollY) {
+          top = rect.top + window.scrollY - menuHeight;
+        }
+  
+        menu.style.top = `${top}px`;
+        menu.style.left = `${left}px`;
+      });
+  
+      dropdown.addEventListener("hide.bs.dropdown", function () {
+        if (!activeMenu) return;
+  
+        activeMenu.classList.remove("show", "floating-menu");
+        activeMenu.style.top = "";
+        activeMenu.style.left = "";
+  
+        // Move back to dropdown container
+        dropdown.appendChild(activeMenu);
+        activeMenu = null;
+      });
+    });
+  
+    // Hide dropdown on scroll/resize
+    window.addEventListener("scroll", () => { if (activeMenu) activeMenu.classList.remove("show"); }, true);
+    window.addEventListener("resize", () => { if (activeMenu) activeMenu.classList.remove("show"); });
+  });
+
+
+
+//css
+
+
   function safeText(v) {
     return (v === null || v === undefined || v === "") ? "-" : v;
   }

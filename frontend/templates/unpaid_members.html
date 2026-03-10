@@ -4,17 +4,21 @@
 
 <link rel="stylesheet" href="{% static 'css/modal_card.css' %}">
 <style>
- 
-  .action-btns .btn:hover {
-    transform: scale(1.05);
-    transition: 0.15s ease;
-  }
-  .action-dropdown-menu.floating-menu {
-    position: fixed !important;
-    z-index: 9999 !important;
-    min-width: 180px;
-  }
-</style>
+ /* Floating dropdown menu */
+.action-dropdown-menu.floating-menu {
+  position: absolute !important;
+  z-index: 99999 !important;
+  min-width: 180px;
+  background: #fff;
+  border-radius: 0.25rem;
+  box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+}
+
+/* Ensure overflow doesn't hide the dropdown */
+.card, .table-responsive, .card-body {
+  overflow: visible !important;
+}
+  </style>
 
 
 <div class="container-fluid">
@@ -90,81 +94,64 @@
   <div class="card">
     <div class="card-body mb-3">
       <div class="table-responsive">
-
+  
         <table class="table table-hover align-middle">
           <thead>
             <tr>
-              <th class="fw-semibold text-muted">#</th>
-              <th class="fw-semibold text-muted">Name</th>
-              <th class="fw-semibold text-muted">Phone</th>
-              <th class="fw-semibold text-muted">Branch</th>
-              <th class="fw-semibold text-muted">Plan</th>
-              <th class="fw-semibold text-muted">Expiry</th>
-              <th class="fw-semibold text-muted">Days Left</th>
-              <th class="fw-semibold text-muted">Status</th>
-              <th class="fw-semibold text-muted">Action</th>
+              <th>#</th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Branch</th>
+              <th>Plan</th>
+              <th>Expiry</th>
+              <th>Days Left</th>
+              <th>Status</th>
+              <th>Action</th>
             </tr>
           </thead>
-
-          <tbody> 
+  
+          <tbody>
             {% for m in members %}
             <tr>
-              <td class="py-3">{{ forloop.counter }}</td>
+              <td>{{ forloop.counter }}</td>
               <td>
                 <div class="d-flex align-items-center gap-2">
-              
                   {% if m.photo %}
-                      <img src="{{ m.photo.url }}"
-                           alt="{{ m.name }}"
-                           width="42"
-                           height="42"
-                           class="rounded-circle border"
-                           style="object-fit: cover;">
+                  <img src="{{ m.photo.url }}" alt="{{ m.name }}" width="42" height="42" class="rounded-circle border" style="object-fit: cover;">
                   {% else %}
-                      <!-- Fallback avatar -->
-                      <div class="rounded-circle border d-flex align-items-center justify-content-center"
-                           style="width:42px;height:42px;background:#f1f3f5;font-weight:600;">
-                          {{ m.name|slice:":1"|upper }}
-                      </div>
+                  <div class="rounded-circle border d-flex align-items-center justify-content-center" style="width:42px;height:42px;background:#f1f3f5;font-weight:600;">
+                    {{ m.name|slice:":1"|upper }}
+                  </div>
                   {% endif %}
-      
-                  <div class="fw-semibold">{{  m.name }}</div>
-              </div>
+                  <div class="fw-semibold">{{ m.name }}</div>
+                </div>
               </td>
-              
-              <td class="py-3">{{ m.phone }}</td>
-              <td class="py-3">{{ m.branch.name }}</td>
-              <td class="py-3">{% if m.plan %}{{ m.plan.name }}{% else %}-{% endif %}</td>
-              <td class="py-3">{{ m.expiry_date }}</td>
-
-              <!-- Days -->
-              <td class="py-3">
+              <td>{{ m.phone }}</td>
+              <td>{{ m.branch.name }}</td>
+              <td>{% if m.plan %}{{ m.plan.name }}{% else %}-{% endif %}</td>
+              <td>{{ m.expiry_date }}</td>
+              <td>
                 {% if m.expiry_date < today %}
                   <span class="text-danger fw-bold">Expired</span>
                 {% else %}
                   {{ m.expiry_date|timeuntil:today }}
                 {% endif %}
               </td>
-
-              <!-- Status -->
-              <td class="py-3">
+              <td>
                 {% if m.expiry_date < today %}
                   <span class="badge bg-danger">Expired</span>
                 {% else %}
                   <span class="badge bg-warning text-dark">Expiring Soon</span>
                 {% endif %}
               </td>
-
+  
               <!-- Actions -->
-              <td class="text-center py-3">
+              <td class="text-center">
                 <div class="dropdown action-dropdown">
-                  <button class="btn btn-light btn-sm "
-                          type="button"
-                          data-bs-toggle="dropdown"
-                          aria-expanded="false">
+                  <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="bi bi-three-dots-vertical"></i>
                   </button>
-              
+  
                   <ul class="dropdown-menu shadow-sm action-dropdown-menu">
                     <li>
                       <a class="dropdown-item" href="#" onclick="openMemberDetails('{{ m.id }}')">
@@ -172,9 +159,7 @@
                       </a>
                     </li>
                     <li>
-                      <a class="dropdown-item"
-                         target="_blank"
-                         href="https://wa.me/91{{ m.phone }}?text=Hello%20{{ m.name }}">
+                      <a class="dropdown-item" target="_blank" href="https://wa.me/91{{ m.phone }}?text=Hello%20{{ m.name }}%20👋,%20your%20gym%20membership%20%20expired%20on%20{{ m.expiry_date }}.%20Please%20renew%20to%20continue%20your%20training%20💪">
                         <i class="bi bi-whatsapp me-2 text-success"></i> WhatsApp
                       </a>
                     </li>
@@ -199,14 +184,15 @@
                   </ul>
                 </div>
               </td>
+            </tr>
             {% empty %}
             <tr>
-              <td colspan="9" class="text-center">No unpaid members 🎉</td>
+              <td colspan="9" class="text-center">No members found 🎉</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
-
+  
       </div>
     </div>
   </div>
@@ -455,65 +441,63 @@
 </div>
 
 <script>
-//css
-
-  document.addEventListener("DOMContentLoaded", function () {
-    let activeMenu = null;
-    let activeParent = null;
   
-    document.querySelectorAll(".action-dropdown").forEach(function (dropdown) {
-      const button = dropdown.querySelector('[data-bs-toggle="dropdown"]');
-      const menu = dropdown.querySelector(".action-dropdown-menu");
-  
-      if (!button || !menu) return;
-  
-      dropdown.addEventListener("show.bs.dropdown", function () {
-        activeParent = dropdown;
-        activeMenu = menu;
-  
-        document.body.appendChild(menu);
-        menu.classList.add("show", "floating-menu");
-  
-        const rect = button.getBoundingClientRect();
-        const menuWidth = 180;
-        const top = rect.bottom + 4;
-        const left = Math.max(8, rect.right - menuWidth);
-  
-        menu.style.top = `${top}px`;
-        menu.style.left = `${left}px`;
+  //css
+ 
+    document.addEventListener("DOMContentLoaded", function () {
+      let activeMenu = null;
+    
+      document.querySelectorAll(".action-dropdown").forEach(function (dropdown) {
+        const button = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+        const menu = dropdown.querySelector(".action-dropdown-menu");
+    
+        if (!button || !menu) return;
+    
+        dropdown.addEventListener("show.bs.dropdown", function () {
+          activeMenu = menu;
+    
+          // Move menu to body
+          document.body.appendChild(menu);
+          menu.classList.add("floating-menu", "show");
+    
+          const rect = button.getBoundingClientRect();
+          const menuWidth = menu.offsetWidth;
+          const menuHeight = menu.offsetHeight;
+    
+          let top = rect.bottom + window.scrollY + 4;
+          let left = rect.right - menuWidth;
+    
+          // Prevent offscreen
+          if (left < 4) left = 4;
+          if (top + menuHeight > window.innerHeight + window.scrollY) {
+            top = rect.top + window.scrollY - menuHeight;
+          }
+    
+          menu.style.top = `${top}px`;
+          menu.style.left = `${left}px`;
+        });
+    
+        dropdown.addEventListener("hide.bs.dropdown", function () {
+          if (!activeMenu) return;
+    
+          activeMenu.classList.remove("show", "floating-menu");
+          activeMenu.style.top = "";
+          activeMenu.style.left = "";
+    
+          // Move back to dropdown container
+          dropdown.appendChild(activeMenu);
+          activeMenu = null;
+        });
       });
-  
-      dropdown.addEventListener("hide.bs.dropdown", function () {
-        if (!activeMenu || !activeParent) return;
-  
-        activeMenu.classList.remove("floating-menu", "show");
-        activeMenu.style.top = "";
-        activeMenu.style.left = "";
-  
-        activeParent.appendChild(activeMenu);
-        activeMenu = null;
-        activeParent = null;
-      });
+    
+      // Hide dropdown on scroll/resize
+      window.addEventListener("scroll", () => { if (activeMenu) activeMenu.classList.remove("show"); }, true);
+      window.addEventListener("resize", () => { if (activeMenu) activeMenu.classList.remove("show"); });
     });
-  
-    window.addEventListener("scroll", function () {
-      if (activeMenu) {
-        activeMenu.classList.remove("show");
-      }
-    }, true);
-  
-    window.addEventListener("resize", function () {
-      if (activeMenu) {
-        activeMenu.classList.remove("show");
-      }
-    });
-  });
 
 
 
-//css
-
-
+  //css
 
   function safeText(v) {
     return (v === null || v === undefined || v === "") ? "-" : v;

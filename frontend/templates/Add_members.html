@@ -30,7 +30,7 @@
             <div class="card shadow-sm border-0 rounded-3 pt-3 pb-3">
                 <div class="card-body">
                     <!-- ✅ Added enctype for file upload -->
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post"  enctype="multipart/form-data">
                         {% csrf_token %}
 
                         <!-- ================= MEMBER PHOTO ================= -->
@@ -265,7 +265,7 @@
                         <!-- ================= ACTIONS ================= -->
                         <div class="row mt-2">
                             <div class="col-12 d-flex justify-content-end gap-2">
-                                <button class="btn btn-primary px-4 shadow-sm">
+                                <button class="btn btn-primary px-4 shadow-sm " id="saveBtn">
                                     <i class="bi bi-check-circle me-1"></i>
                                     Save Member
                                 </button>
@@ -286,6 +286,8 @@
 
 <script>
 
+
+        
     function num(id) {
         const v = parseFloat(document.getElementById(id)?.value || 0);
         return isNaN(v) ? 0 : v;
@@ -299,8 +301,8 @@
         const paid = num("paid_amount");
         const pending = Math.max(finalAmt - paid, 0);
     
-        document.getElementById("final_amount").value = finalAmt.toFixed(2);
-        document.getElementById("pending_amount").value = pending.toFixed(2);
+        //document.getElementById("final_amount").value = finalAmt.toFixed(2);
+        //document.getElementById("pending_amount").value = pending.toFixed(2);
       }
     
       document.addEventListener("DOMContentLoaded", function () {
@@ -504,6 +506,8 @@
         }, 3000); // 5000ms = 5 sec
 
     });
+
+
 
 
 </script>

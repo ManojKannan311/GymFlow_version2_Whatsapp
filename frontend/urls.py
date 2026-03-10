@@ -66,6 +66,10 @@ urlpatterns = [
     # archived_members
     path("members/archived/", archived_members, name="archived_members"),
     path("members/<int:member_id>/restore/", restore_member, name="restore_member"),
+    
+    #Bulk_save
+    path("members/import/",preview_members_excel, name="preview_members_excel"),
+    path("members/import/confirm/",confirm_import_members, name="confirm_import_members"),
 
 
 ]

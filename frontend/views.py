@@ -44,6 +44,15 @@ from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
+
+
+import pandas as pd
+from decimal import Decimal
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+
 User = get_user_model()
 
 # Checker
@@ -2810,3 +2819,153 @@ def restore_member(request, member_id):
 
     messages.success(request, f"{member.name} restored successfully.")
     return redirect("archived_members")
+
+
+
+# Bulk Importing
+
+@login_required
+@login_required
+def preview_members_excel(request):
+    gym = request.user.gym
+
+    if request.method == "POST":
+        excel_file = request.FILES.get("excel_file")
+
+        if not excel_file:
+            messages.error(request, "Upload Excel file")
+            return redirect("preview_members_excel")
+
+        # Important for phone numbers
+        df = pd.read_excel(excel_file, dtype={"phone": str})
+
+        preview_data = []
+
+        for index, row in df.iterrows():
+
+            name = str(row.get("name")).strip()
+            phone = str(row.get("phone")).strip()
+            branch_name = str(row.get("branch")).strip()
+            plan_name = str(row.get("plan")).strip()
+
+            error = None
+
+            # Convert dates safely
+            join_date = row.get("join_date")
+            start_date = row.get("start_date")
+            expiry_date = row.get("expiry_date")
+
+            join_date = join_date.strftime("%Y-%m-%d") if pd.notna(join_date) else None
+            start_date = start_date.strftime("%Y-%m-%d") if pd.notna(start_date) else None
+            expiry_date = expiry_date.strftime("%Y-%m-%d") if pd.notna(expiry_date) else None
+
+            # Check duplicate phone
+            if Member.objects.filter(gym=gym, phone=phone).exists():
+                error = "Phone already exists"
+
+            # Validate branch
+            try:
+                branch = Branch.objects.get(name=branch_name, gym=gym)
+            except Branch.DoesNotExist:
+                branch = None
+                error = "Invalid Branch"
+
+            # Validate plan
+            if branch:
+                try:
+                    plan = MembershipPlan.objects.get(name=plan_name, branch=branch)
+                except MembershipPlan.DoesNotExist:
+                    plan = None
+            else:
+                plan = None
+
+            preview_data.append({
+                "row": index + 1,
+                "name": name,
+                "phone": phone,
+                "branch": branch_name,
+                "plan": plan_name,
+                "join_date": join_date,
+                "start_date": start_date,
+                "expiry_date": expiry_date,
+                "plan_price": row.get("plan_price"),
+                "discount": row.get("discount"),
+                "paid_amount": row.get("paid_amount"),
+                "payment_mode": row.get("payment_mode"),
+                "error": error
+            })
+
+        # Store safe data in session
+        request.session["import_data"] = preview_data
+
+        return render(request, "import_preview.html", {"data": preview_data})
+
+    return redirect("gym_profile")
+
+
+@login_required
+def confirm_import_members(request):
+
+    gym = request.user.gym
+    data = request.session.get("import_data")
+
+    if not data:
+        messages.error(request, "No import data found")
+        return redirect("member_list")
+
+    created = 0
+
+    for row in data:
+
+        if row["error"]:
+            continue
+
+        branch = Branch.objects.get(name=row["branch"], gym=gym)
+        plan = MembershipPlan.objects.filter(name=row["plan"], branch=branch).first()
+
+        member = Member.objects.create(
+            gym=gym,
+            branch=branch,
+            name=row["name"].capitalize(),
+            phone=row["phone"],
+            join_date=row["join_date"],
+            start_date=row["start_date"],
+            expiry_date=row["expiry_date"],
+            plan=plan
+        )
+
+        plan_price = Decimal(row["plan_price"] or 0)
+        discount = Decimal(row["discount"] or 0)
+        paid_amount = Decimal(row["paid_amount"] or 0)
+
+        final_amount = plan_price - discount
+        payment_date = datetime.strptime(row["start_date"], "%Y-%m-%d").date()
+        coverage_start = datetime.strptime(row["start_date"], "%Y-%m-%d").date()
+        coverage_end = datetime.strptime(row["expiry_date"], "%Y-%m-%d").date()
+    
+    
+        if paid_amount > 0:
+            Payment.objects.create(
+        gym=gym,
+        member=member,
+        plan=plan,
+        invoice_no=generate_invoice_number(gym),
+        amount=paid_amount,
+        payment_mode=row["payment_mode"],
+        payment_date=payment_date,
+        coverage_start=coverage_start,
+        coverage_end=coverage_end,
+        plan_price=plan_price,
+        discount_amount=discount,
+        final_amount=final_amount,
+        created_by=request.user
+    )
+
+        created += 1
+
+    request.session.pop("import_data")
+
+    messages.success(request, f"{created} Members Imported Successfully")
+
+    return redirect("member_list")
+ 
