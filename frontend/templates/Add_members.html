@@ -1,8 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block content %}
- <!-- Importing CSS file -->
- <link rel="stylesheet" href="{% static 'css/add_member.css' %}">
+<!-- Importing CSS file -->
+<link rel="stylesheet" href="{% static 'css/add_member.css' %}">
 <div class="container-fluid mt-4">
     {% if messages %}
     {% for message in messages %}
@@ -30,85 +30,78 @@
             <div class="card shadow-sm border-0 rounded-3 pt-3 pb-3">
                 <div class="card-body">
                     <!-- ✅ Added enctype for file upload -->
-                    <form method="post"  enctype="multipart/form-data">
+                    <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
 
                         <!-- ================= MEMBER PHOTO ================= -->
 
 
-
-
-                        <h6 class="text-uppercase fw-bold text-secondary mb-3 mt-2">Member Photo</h6>
-
                         <div class="row">
                             <div class="col-12 col-lg-12 mb-4">
                                 <div class="member-photo-card">
                                     <div class="member-photo-title">Member Photo</div>
-                                
+
                                     <div class="photo-upload-wrap">
                                         <!-- Left: Photo -->
                                         <div class="photo-left">
                                             <div class="photo-avatar-box">
-                                                <img id="photo_preview"
-                                                     src="{% static 'img/user-placeholder.png' %}"
-                                                     alt="Member Photo"
-                                                     onclick="startCamera()"
-                                                     onerror="this.src='https://ui-avatars.com/api/?name=Member&background=EEF4FF&color=2457D6&size=150'">
-                                
-                                                <button type="button"
-                                                        onclick="startCamera()"
-                                                        class="btn btn-primary photo-camera-btn">
-                                                    <i class="bi bi-camera-fill text-white"></i>
+
+                                                <img id="photo_preview" src="{% static 'img/user-placeholder.png' %}"
+                                                    alt="Member Photo" onclick="startCamera()"
+                                                    onerror="this.src='https://ui-avatars.com/api/?name=Member&background=EEF4FF&color=2457D6&size=150'">
+
+                                                <!-- Camera Button -->
+                                                <button type="button" onclick="startCamera()"
+                                                    class="btn btn-primary photo-camera-btn">
+                                                    <i class="bi bi-camera-fill"></i>
                                                 </button>
+
+                                                <button type="button"
+                                                    onclick="document.getElementById('photo_input').click()"
+                                                    class="btn btn-light photo-upload-btn">
+                                                    <i class="bi bi-upload"></i>
+                                                </button>
+
                                             </div>
                                         </div>
-                                
+
                                         <!-- Right: Content -->
                                         <div class="photo-info">
                                             <h6>Capture member profile photo</h6>
-                                            <p>Use the device camera to take a clean profile image for member records and identification.</p>
-                                
-                                            <div class="photo-badge-list mb-3">
-                                                <span class="photo-badge">
-                                                    <i class="bi bi-camera"></i> Live Capture
-                                                </span>
-                                                <span class="photo-badge">
-                                                    <i class="bi bi-person-badge"></i> Profile Ready
-                                                </span>
-                                                <span class="photo-badge">
-                                                    <i class="bi bi-shield-check"></i> Stored Securely
-                                                </span>
-                                            </div>
-                                
+                                            <p>Use camera or upload from your device.</p>
+
                                             <div class="dob-input">
                                                 <label class="form-label small text-muted mb-1">Date of Birth</label>
                                                 <input type="date" class="form-control" name="date_of_birth" required>
                                             </div>
                                         </div>
                                     </div>
-                                
+
+                                    <!-- Hidden base64 -->
                                     <input type="hidden" name="captured_photo" id="captured_photo">
-                                
-                                    <div id="camera_container" class="camera-panel">
+
+                                    <!-- File input -->
+                                    <input type="file" id="photo_input" accept="image/*" capture="environment"
+                                        style="display:none">
+
+                                    <!-- Camera Panel -->
+                                    <div id="camera_container" class="camera-panel" style="display:none;">
                                         <div class="camera-panel-header">
                                             <h6>Camera Preview</h6>
-                                            <span class="text-muted small">Position face in center</span>
                                         </div>
-                                
+
                                         <div class="camera-panel-body">
-                                            <div class="camera-video-wrap">
-                                                <video id="video" autoplay playsinline></video>
-                                            </div>
-                                
-                                            <div class="camera-actions">
+                                            <video id="video" autoplay playsinline></video>
+
+                                            <div class="camera-actions mt-2">
                                                 <button type="button" class="btn btn-success" onclick="capturePhoto()">
-                                                    <i class="bi bi-check2-circle me-1"></i> Capture
+                                                    Capture
                                                 </button>
-                                                <button type="button" class="btn btn-outline-danger" onclick="stopCamera()">
-                                                    <i class="bi bi-x-circle me-1"></i> Close
+                                                <button type="button" class="btn btn-danger" onclick="stopCamera()">
+                                                    Close
                                                 </button>
                                             </div>
-                                
+
                                             <canvas id="canvas" style="display:none;"></canvas>
                                         </div>
                                     </div>
@@ -287,32 +280,28 @@
 <script>
 
 
-        
+
     function num(id) {
         const v = parseFloat(document.getElementById(id)?.value || 0);
         return isNaN(v) ? 0 : v;
-      }
-    
-      function calcAmounts() {
+    }
+
+    function calcAmounts() {
         const price = num("price");
         const discount = num("discount_amount");
         const finalAmt = Math.max(price - discount, 0);
-    
+
         const paid = num("paid_amount");
         const pending = Math.max(finalAmt - paid, 0);
-    
-        //document.getElementById("final_amount").value = finalAmt.toFixed(2);
-        //document.getElementById("pending_amount").value = pending.toFixed(2);
-      }
-    
-      document.addEventListener("DOMContentLoaded", function () {
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
         ["discount_amount", "paid_amount"].forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.addEventListener("input", calcAmounts);
+            const el = document.getElementById(id);
+            if (el) el.addEventListener("input", calcAmounts);
         });
         calcAmounts();
-      });
-
+    });
 
     $(function () {
 
@@ -340,8 +329,7 @@
                 $cameraContainer.show();
 
             } catch (err) {
-                alert("Camera access denied or not supported.");
-                console.error(err);
+                alert("Camera not supported or permission denied");
             }
         };
 
@@ -358,11 +346,8 @@
 
             const imageData = canvas.toDataURL("image/jpeg", 0.8);
 
-            // ✅ Set preview
-            if ($preview.length) $preview.attr("src", imageData);
-
-            // ✅ Save base64 to hidden input (send to Django)
-            if ($captured.length) $captured.val(imageData);
+            $preview.attr("src", imageData);
+            $captured.val(imageData);
 
             stopCamera();
         };
@@ -375,6 +360,25 @@
             }
             $cameraContainer.hide();
         };
+
+        // 📁 Upload from device
+        $("#photo_input").on("change", function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            stopCamera(); // stop camera if open
+
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const imageData = e.target.result;
+
+                $preview.attr("src", imageData);
+                $captured.val(imageData);
+            };
+
+            reader.readAsDataURL(file);
+        });
 
     });
     $(document).ready(function () {

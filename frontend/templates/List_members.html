@@ -2,6 +2,7 @@
 {% load static %}
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/modal_card.css' %}">
+<link rel="stylesheet" href="{% static 'css/add_member.css' %}">
 <div class="container-fluid mt-4">
     {% if messages %}
     {% for message in messages %}
@@ -164,66 +165,131 @@
 
 
 <!-- Member Edit -->
-<div class="modal fade" id="Member_edit" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<!-- Member Edit -->
+<div class="modal fade" id="Member_edit" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
+
             <div class="modal-header">
-                <h1 class="modal-title fs-5" id="exampleModalLabel">Edit Member details</h1>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Edit Member Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+
             <div class="modal-body">
-                <form method="post">
+
+                <!-- IMPORTANT: enctype added -->
+                <form method="post" id="editMemberForm" enctype="multipart/form-data">
                     {% csrf_token %}
-                    <!-- ================= BRANCH INFO ================= -->
+
                     <h6 class="text-uppercase fw-bold text-secondary mb-3">Member Info</h6>
 
                     <div class="row">
-                        <!-- <div class="col-md-6 mb-4">
-                            <label class="form-label small fw-semibold text-muted">
-                                Branch <span class="text-danger">*</span>
-                            </label>
-                            <select class="form-select" name="branch" id="branch_id" required>
-                                <option value="">Select Branch</option>
-                                {% for branch in add_new %}
-                                <option value="{{ branch.id }}">{{ branch.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div> -->
-                        <input type="text" name="save_member_id" id="save_member_id" hidden>
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label small fw-semibold text-muted">
-                                Name <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" name="member_name" class="form-control" placeholder="Plan name" required>
+
+                        <!-- PHOTO SECTION -->
+                        <div class="col-12 mb-4">
+                            <div class="member-photo-card">
+                                <div class="member-photo-title">Member Photo</div>
+
+                                <div class="photo-upload-wrap">
+
+                                    <!-- LEFT -->
+                                    <div class="photo-left">
+                                        <div class="photo-avatar-box">
+
+                                            <img id="edit_photo_preview"
+                                                 src="{% static 'img/user-placeholder.png' %}"
+                                                 onclick="startCamera()"
+                                                 onerror="this.src='https://ui-avatars.com/api/?name=Member'">
+
+                                            <!-- Camera -->
+                                            <button type="button"
+                                                    onclick="startCamera()"
+                                                    class="btn btn-primary photo-camera-btn">
+                                                <i class="bi bi-camera-fill"></i>
+                                            </button>
+
+                                            <!-- Upload -->
+                                            <button type="button"
+                                                    onclick="document.getElementById('edit_photo_input').click()"
+                                                    class="btn btn-light photo-upload-btn">
+                                                <i class="bi bi-upload"></i>
+                                            </button>
+
+                                        </div>
+                                    </div>
+
+                                    <!-- RIGHT -->
+                                    <div class="photo-info">
+                                        <h6>Update profile photo</h6>
+                                        <p>Use camera or upload from device</p>
+
+                                        <div class="dob-input">
+                                            <label class="form-label small text-muted">Date of Birth</label>
+                                            <input type="date"
+                                                   id="edit_dob"
+                                                   name="date_of_birth"
+                                                   class="form-control">
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                                <!-- Hidden -->
+                                <input type="hidden" name="captured_photo" id="edit_captured_photo">
+
+                                <!-- File -->
+                                <input type="file"
+                                       name="photo"
+                                       id="edit_photo_input"
+                                       accept="image/*"
+                                       style="display:none">
+
+                                <!-- Camera Panel -->
+                                <div id="edit_camera_container" class="camera-panel" style="display:none;">
+                                    <video id="edit_video" autoplay playsinline></video>
+
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-success" onclick="capturePhoto()">
+                                            Capture
+                                        </button>
+                                        <button type="button" class="btn btn-danger" onclick="stopCamera()">
+                                            Close
+                                        </button>
+                                    </div>
+
+                                    <canvas id="edit_canvas" style="display:none;"></canvas>
+                                </div>
+
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label small fw-semibold text-muted">
-                                Phone Number <span class="text-danger">*</span>
-                            </label>
-                            <input type="number" name="Phone_number" class="form-control" placeholder="10 digit number"
-                                required>
+
+                        <!-- HIDDEN ID -->
+                        <input type="hidden" name="save_member_id" id="save_member_id">
+
+                        <!-- NAME -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small">Name</label>
+                            <input type="text" name="member_name" class="form-control" required>
                         </div>
+
+                        <!-- PHONE -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small">Phone</label>
+                            <input type="number" name="Phone_number" class="form-control" required>
+                        </div>
+
                     </div>
 
-                    <!-- ================= ACTIONS ================= -->
-                    <div class="row mt-2">
-                        <div class="col-12 d-flex justify-content-end gap-2">
-                            <button class="btn btn-primary px-4 shadow-sm" id="">
-                                <i class="bi bi-check-circle me-1"></i>
-                                Save changes
-                            </button>
-                            <!-- <button type="reset" class="btn btn-light border">
-                      Reset
-                  </button> -->
-                        </div>
+                    <!-- ACTION -->
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-primary">
+                            Save Changes
+                        </button>
                     </div>
 
                 </form>
+
             </div>
-            <!-- <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Save changes</button>
-      </div> -->
         </div>
     </div>
 </div>
@@ -235,12 +301,12 @@
 <div class="modal fade" id="memberDetailsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
-  
+
             <div class="modal-header">
                 <h5 class="modal-title">Member Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-  
+
             <div class="modal-body">
                 <!-- Member Summary -->
                 <div class="row g-3 shadow-sm">
@@ -248,11 +314,12 @@
                         <div class="border rounded p-3">
                             <div><b>Name:</b> <span id="md_name">-</span></div>
                             <div><b>Phone:</b> <span id="md_phone">-</span></div>
-                            <div><b>Status:</b> <span id="md_status" class="badge rounded-pill bg-success">-</span></div>
+                            <div><b>Status:</b> <span id="md_status" class="badge rounded-pill bg-success">-</span>
+                            </div>
                             <div><b>Join Date:</b> <span id="md_join_date">-</span></div>
                         </div>
                     </div>
-  
+
                     <div class="col-md-6 ">
                         <div class="border rounded p-3">
                             <div><b>Gym:</b> <span id="md_gym">-</span></div>
@@ -262,59 +329,59 @@
                         </div>
                     </div>
                 </div>
-  
+
                 <hr>
-  
+
                 <!-- Payment Summary -->
                 <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                     <h6 class="mb-0">Payment History</h6>
                     <div class="text-end">
-                      <span class="me-3"><b>Total Paid:</b> ₹<span id="md_total_paid">0</span></span>
-                      <span class="me-3"><b>Total Discount:</b> ₹<span id="md_total_discount">0</span></span>
-                      <span class="me-3"><b>Total Final:</b> ₹<span id="md_total_final">0</span></span>
-                      <span class="me-3"><b>Pending:</b> ₹<span id="md_total_pending">0</span></span>
-                      <span><b>Last Payment:</b> <span id="md_last_payment">-</span></span>
+                        <span class="me-3"><b>Total Paid:</b> ₹<span id="md_total_paid">0</span></span>
+                        <span class="me-3"><b>Total Discount:</b> ₹<span id="md_total_discount">0</span></span>
+                        <span class="me-3"><b>Total Final:</b> ₹<span id="md_total_final">0</span></span>
+                        <span class="me-3"><b>Pending:</b> ₹<span id="md_total_pending">0</span></span>
+                        <span><b>Last Payment:</b> <span id="md_last_payment">-</span></span>
                     </div>
-                  </div>
-  
+                </div>
+
                 <!-- Payment Table -->
                 <div class="table-responsive">
-                  <table class="table table-sm table-bordered align-middle">
-                    <thead>
-                      <tr>
-                        <th style="width:50px;">#</th>
-                        <th>Invoice</th>
-                        <th>Payment Date</th>
-                        <th>Plan</th>
-                        <th>Plan Price</th>
-                        <th>Discount</th>
-                        <th>Final</th>
-                        <th>Paid</th>
-                        <th>Mode</th>
-                        <th>Reason</th>
-                        <th>Given By</th>
-                        <th>Coverage Start</th>
-                        <th>Coverage End</th>
-                      </tr>
-                    </thead>
-                    <tbody id="md_payments_tbody">
-                      <tr>
-                        <td colspan="13" class="text-center">No payments</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                    <table class="table table-sm table-bordered align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width:50px;">#</th>
+                                <th>Invoice</th>
+                                <th>Payment Date</th>
+                                <th>Plan</th>
+                                <th>Plan Price</th>
+                                <th>Discount</th>
+                                <th>Final</th>
+                                <th>Paid</th>
+                                <th>Mode</th>
+                                <th>Reason</th>
+                                <th>Given By</th>
+                                <th>Coverage Start</th>
+                                <th>Coverage End</th>
+                            </tr>
+                        </thead>
+                        <tbody id="md_payments_tbody">
+                            <tr>
+                                <td colspan="13" class="text-center">No payments</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-  
+
             </div>
-  
+
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
-  
+
         </div>
     </div>
-  </div>
-  
+</div>
+
 
 <!-- Plan Renewal Modal -->
 <div class="modal fade" id="renewPlanModal" tabindex="-1">
@@ -399,51 +466,180 @@
 {% if whatsapp_url or invoice_id %}
 <!-- WhatsApp Modal -->
 <div class="modal fade" id="whatsappModal" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
 
-      <div class="modal-header">
-        <h5 class="modal-title">Send Receipt</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
+            <div class="modal-header">
+                <h5 class="modal-title">Send Receipt</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
 
-      <div class="modal-body text-center">
+            <div class="modal-body text-center">
 
-        <p class="mb-3">
-          Receipt is ready ✅ <br>
-          Click below to preview the invoice.
-        </p>
+                <p class="mb-3">
+                    Receipt is ready ✅ <br>
+                    Click below to preview the invoice.
+                </p>
 
-        {% if invoice_id %}
-        <a href="{% url 'generate_invoice_pdf' invoice_id %}"
-           target="_blank"
-           class="btn btn-primary">
-           <i class="bi bi-filetype-pdf me-1"></i> View PDF
-        </a>
-        {% endif %}
+                {% if invoice_id %}
+                <a href="{% url 'generate_invoice_pdf' invoice_id %}" target="_blank" class="btn btn-primary">
+                    <i class="bi bi-filetype-pdf me-1"></i> View PDF
+                </a>
+                {% endif %}
 
-      </div>
+            </div>
 
-      <div class="modal-footer justify-content-between">
+            <div class="modal-footer justify-content-between">
 
-        {% if whatsapp_url %}
-        <a href="{{ whatsapp_url }}" target="_blank" class="btn btn-success">
-          <i class="bi bi-whatsapp me-1"></i> Open WhatsApp
-        </a>
-        {% endif %}
+                {% if whatsapp_url %}
+                <a href="{{ whatsapp_url }}" target="_blank" class="btn btn-success">
+                    <i class="bi bi-whatsapp me-1"></i> Open WhatsApp
+                </a>
+                {% endif %}
 
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-          Later
-        </button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    Later
+                </button>
 
-      </div>
+            </div>
 
+        </div>
     </div>
-  </div>
 </div>
 {% endif %}
 
 <script>
+    function num(id) {
+        const v = parseFloat(document.getElementById(id)?.value || 0);
+        return isNaN(v) ? 0 : v;
+    }
+    
+    function calcAmounts() {
+        const price = num("price");
+        const discount = num("discount_amount");
+        const finalAmt = Math.max(price - discount, 0);
+    
+        const paid = num("paid_amount");
+        const pending = Math.max(finalAmt - paid, 0);
+    }
+    
+    document.addEventListener("DOMContentLoaded", function () {
+        ["discount_amount", "paid_amount"].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.addEventListener("input", calcAmounts);
+        });
+        calcAmounts();
+    });
+    
+    
+    $(function () {
+    
+        let stream = null;
+    
+        // 🎯 Helper → detect context (Add or Edit)
+        function getContext() {
+            if ($("#Member_edit").hasClass("show")) {
+                return {
+                    video: document.getElementById("edit_video"),
+                    canvas: document.getElementById("edit_canvas"),
+                    preview: $("#edit_photo_preview"),
+                    container: $("#edit_camera_container"),
+                    captured: $("#edit_captured_photo")
+                };
+            } else {
+                return {
+                    video: document.getElementById("video"),
+                    canvas: document.getElementById("canvas"),
+                    preview: $("#photo_preview"),
+                    container: $("#camera_container"),
+                    captured: $("#captured_photo")
+                };
+            }
+        }
+    
+        // 🔥 Open Camera
+        window.startCamera = async function () {
+            const ctx = getContext();
+    
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" },
+                    audio: false
+                });
+    
+                if (ctx.video) ctx.video.srcObject = stream;
+                ctx.container.show();
+    
+            } catch (err) {
+                alert("Camera not supported or permission denied");
+            }
+        };
+    
+        // 📸 Capture Photo
+        window.capturePhoto = function () {
+            const ctxObj = getContext();
+    
+            const video = ctxObj.video;
+            const canvas = ctxObj.canvas;
+    
+            if (!video || !canvas) return;
+    
+            const ctx = canvas.getContext("2d");
+    
+            canvas.width = video.videoWidth || 300;
+            canvas.height = video.videoHeight || 300;
+    
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+            const imageData = canvas.toDataURL("image/jpeg", 0.8);
+    
+            ctxObj.preview.attr("src", imageData);
+            ctxObj.captured.val(imageData);
+    
+            stopCamera();
+        };
+    
+        // ❌ Stop Camera
+        window.stopCamera = function () {
+            const ctx = getContext();
+    
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+            }
+    
+            ctx.container.hide();
+        };
+    
+        // 📁 Upload (ADD)
+        $("#photo_input").on("change", function (event) {
+            handleUpload(event, "#photo_preview", "#captured_photo");
+        });
+    
+        // 📁 Upload (EDIT)
+        $("#edit_photo_input").on("change", function (event) {
+            handleUpload(event, "#edit_photo_preview", "#edit_captured_photo");
+        });
+    
+        // 🔁 Shared upload function
+        function handleUpload(event, previewId, hiddenId) {
+            const file = event.target.files[0];
+            if (!file) return;
+    
+            stopCamera();
+    
+            const reader = new FileReader();
+    
+            reader.onload = function (e) {
+                $(previewId).attr("src", e.target.result);
+                $(hiddenId).val(e.target.result);
+            };
+    
+            reader.readAsDataURL(file);
+        }
+    
+    });
+
     document.addEventListener("DOMContentLoaded", function () {
         const modal = new bootstrap.Modal(document.getElementById("whatsappModal"));
         modal.show();
@@ -477,116 +673,159 @@
         });
     });
 
-    $(document).on("click", "#dit-plan-btn", function () {
+    // OPEN EDIT MODAL + LOAD DATA
+$(document).on("click", "#dit-plan-btn", function () {
 
-        let planId = $(this).data("id");
+    let memberId = $(this).data("id");
 
-        $.get(`/member/${planId}/data/`, function (data) {
-            console.log(data)
-            $("#Plan_edit").modal("show");
+    $.get(`/member/${memberId}/data/`, function (data) {
 
-            $("#Plan_edit").data("id", planId);
+        $("#Member_edit").modal("show");
 
-            $("#branch_id").val(data.branch_id);
-            $("input[name='save_member_id']").val(data.ids)
-            $("input[name='member_name']").val(data.name);
-            $("input[name='Phone_number']").val(data.duration_days);
-        });
+        // Set values
+        $("#save_member_id").val(data.ids);
+        $("input[name='member_name']").val(data.name);
+        $("input[name='Phone_number']").val(data.phone);
+        $("#edit_dob").val(data.dob);
+
+        // ✅ Reset base64 (important)
+        $("#edit_captured_photo").val("");
+
+        // ✅ Set image preview
+        if (data.photo) {
+            $("#edit_photo_preview").attr("src", data.photo);
+        } else {
+            $("#edit_photo_preview").attr("src", "/static/img/user-placeholder.png");
+        }
 
     });
 
+});
 
 
-    $("#Member_edit form").submit(function (e) {
-        e.preventDefault();
+// SUBMIT FORM (AJAX)
+$("#editMemberForm").submit(function (e) {
+    e.preventDefault();
 
-        let MemberId = $("#save_member_id").val();
+    let memberId = $("#save_member_id").val();
 
-        $.ajax({
-            url: `/member/${MemberId}/update/`,
-            type: "POST",
-            data: $(this).serialize(),
-            success: function (response) {
-                $("#Member_edit").modal("hide");
-                confirm("Updated Successfully")
+    let formData = new FormData(this);
+
+    $.ajax({
+        url: `/member/${memberId}/update/`,
+        type: "POST",
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            "X-CSRFToken": $("input[name=csrfmiddlewaretoken]").val()
+        },
+        success: function (res) {
+            if (res.success) {
+                alert("Updated successfully ✅");
                 location.reload();
-            },
-            error: function () {
-                alert("Error updating plan");
+            } else {
+                alert(res.error || "Update failed");
             }
-        });
+        },
+        error: function () {
+            alert("Something went wrong ❌");
+        }
     });
+});
+
+
+
+//    $("#Member_edit form").submit(function (e) {
+//        e.preventDefault();
+//
+//        let MemberId = $("#save_member_id").val();
+//
+//        $.ajax({
+//            url: `/member/${MemberId}/update/`,
+//            type: "POST",
+//            data: $(this).serialize(),
+//            success: function (response) {
+//                $("#Member_edit").modal("hide");
+//                confirm("Updated Successfully")
+//                location.reload();
+//            },
+//            error: function () {
+//                alert("Error updating plan");
+//            }
+//        });
+//    });
 
     function safeText(v) {
         return (v === null || v === undefined || v === "") ? "-" : v;
     }
-// ---------- member details ----------
-function setStatusBadge(label) {
-    const $el = $("#md_status");
-    $el.text(safeText(label));
-  
-    // reset classes
-    $el.removeClass("bg-success bg-danger bg-warning text-dark");
-  
-    const l = String(label || "").toLowerCase();
-    if (l.includes("active")) $el.addClass("bg-success");
-    else if (l.includes("expired")) $el.addClass("bg-danger");
-    else if (l.includes("expir")) $el.addClass("bg-warning text-dark");
-    else $el.addClass("bg-secondary");
-  }
-  function formatMoney(value) {
-    const num = parseFloat(value || 0);
-    return num.toLocaleString("en-IN", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  }
-  
-  function openMemberDetails(memberId) {
-    $.ajax({
-      url: `/members/${memberId}/full-details/`,
-      type: "GET",
-      dataType: "json",
-      success: function (data) {
-        // Member
-        $("#md_name").text(safeText(data.member.name));
-        $("#md_phone").text(safeText(data.member.phone));
-        setStatusBadge(data.member.status_label);
-        $("#md_join_date").text(safeText(data.member.join_date));
-  
-        $("#md_gym").text(safeText(data.member.gym_name));
-        $("#md_branch").text(safeText(data.member.branch_name));
-  
-        $("#md_plan").text(
-          data.member.plan_name
-            ? `${data.member.plan_name} (₹${safeText(data.member.plan_price)})`
-            : "-"
-        );
-  
-        $("#md_validity").text(
-          `${safeText(data.member.start_date)} → ${safeText(data.member.expiry_date)}`
-        );
-  
-        // Summary
-        $("#md_total_paid").text(formatMoney(data.summary.total_paid));
-        $("#md_total_discount").text(formatMoney(data.summary.total_discount));
-        $("#md_total_final").text(formatMoney(data.summary.total_final_amount));
-        $("#md_total_pending").text(formatMoney(data.summary.total_pending));
-        $("#md_last_payment").text(safeText(data.summary.last_payment_date));
-  
-        // Payments table
-        const $tbody = $("#md_payments_tbody");
-        $tbody.empty();
-  
-        if (!data.payments || data.payments.length === 0) {
-          $tbody.html(`<tr><td colspan="13" class="text-center text-muted">No payments</td></tr>`);
-        } else {
-          $.each(data.payments, function (idx, p) {
-            const givenBy = p.created_by_name
-              ? `${p.created_by_name}${p.created_by_role ? ` (${p.created_by_role})` : ""}`
-              : "-";
-  
-              $tbody.append(`
+    // ---------- member details ----------
+    function setStatusBadge(label) {
+        const $el = $("#md_status");
+        $el.text(safeText(label));
+
+        // reset classes
+        $el.removeClass("bg-success bg-danger bg-warning text-dark");
+
+        const l = String(label || "").toLowerCase();
+        if (l.includes("active")) $el.addClass("bg-success");
+        else if (l.includes("expired")) $el.addClass("bg-danger");
+        else if (l.includes("expir")) $el.addClass("bg-warning text-dark");
+        else $el.addClass("bg-secondary");
+    }
+    function formatMoney(value) {
+        const num = parseFloat(value || 0);
+        return num.toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function openMemberDetails(memberId) {
+        $.ajax({
+            url: `/members/${memberId}/full-details/`,
+            type: "GET",
+            dataType: "json",
+            success: function (data) {
+                // Member
+                $("#md_name").text(safeText(data.member.name));
+                $("#md_phone").text(safeText(data.member.phone));
+                setStatusBadge(data.member.status_label);
+                $("#md_join_date").text(safeText(data.member.join_date));
+
+                $("#md_gym").text(safeText(data.member.gym_name));
+                $("#md_branch").text(safeText(data.member.branch_name));
+
+                $("#md_plan").text(
+                    data.member.plan_name
+                        ? `${data.member.plan_name} (₹${safeText(data.member.plan_price)})`
+                        : "-"
+                );
+
+                $("#md_validity").text(
+                    `${safeText(data.member.start_date)} → ${safeText(data.member.expiry_date)}`
+                );
+
+                // Summary
+                $("#md_total_paid").text(formatMoney(data.summary.total_paid));
+                $("#md_total_discount").text(formatMoney(data.summary.total_discount));
+                $("#md_total_final").text(formatMoney(data.summary.total_final_amount));
+                $("#md_total_pending").text(formatMoney(data.summary.total_pending));
+                $("#md_last_payment").text(safeText(data.summary.last_payment_date));
+
+                // Payments table
+                const $tbody = $("#md_payments_tbody");
+                $tbody.empty();
+
+                if (!data.payments || data.payments.length === 0) {
+                    $tbody.html(`<tr><td colspan="13" class="text-center text-muted">No payments</td></tr>`);
+                } else {
+                    $.each(data.payments, function (idx, p) {
+                        const givenBy = p.created_by_name
+                            ? `${p.created_by_name}${p.created_by_role ? ` (${p.created_by_role})` : ""}`
+                            : "-";
+
+                        $tbody.append(`
               <tr>
                 <td>${idx + 1}</td>
                 <td>${safeText(p.invoice_no)}</td>
@@ -603,19 +842,19 @@ function setStatusBadge(label) {
                 <td>${safeText(p.coverage_end)}</td>
               </tr>
             `);
-          });
-        }
-  
-        // Show modal (Bootstrap 5)
-        const modalEl = document.getElementById("memberDetailsModal");
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
-      },
-      error: function (xhr, status, err) {
-        console.error("Error loading member details:", err);
-        alert(xhr.responseJSON?.error || "Failed to load member details");
-      }
-    });
-  }
+                    });
+                }
+
+                // Show modal (Bootstrap 5)
+                const modalEl = document.getElementById("memberDetailsModal");
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            },
+            error: function (xhr, status, err) {
+                console.error("Error loading member details:", err);
+                alert(xhr.responseJSON?.error || "Failed to load member details");
+            }
+        });
+    }
     // CSRF (needed for Django POST)
     function getCookie(name) {
         let cookieValue = null;

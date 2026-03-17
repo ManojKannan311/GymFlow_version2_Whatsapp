@@ -432,117 +432,110 @@ def Add_members(request):
     if request.method == "GET":
         branches = Branch.objects.filter(gym=gym).values("name", "id")
         return render(request, "Add_members.html", {"branches": branches})
-
     # -------------------------
-    # POST
+    # POST DATA
     # -------------------------
     name = (request.POST.get("name") or "").strip()
     phone = (request.POST.get("phone") or "").strip()
-    branch_id = (request.POST.get("branch") or "").strip()
-    plan_id = (request.POST.get("plan") or "").strip()
-    DOB=request.POST.get("date_of_birth")
+    branch_id = request.POST.get("branch")
+    plan_id = request.POST.get("plan")
+
+    dob = request.POST.get("date_of_birth")  # safer naming
     join_date_str = request.POST.get("join_date")
-    start_date_str = request.POST.get("Start_date")  # membership start date
+    start_date_str = request.POST.get("Start_date")
 
     payment_method = (request.POST.get("Payment_method") or "").strip()
 
-    # IMPORTANT: keep RAW paid input to detect empty
     paid_amount_raw = request.POST.get("paid_amount")
     paid_amount = _to_decimal(paid_amount_raw, default="0")
 
     discount_amount = _to_decimal(request.POST.get("discount_amount"), default="0")
     discount_reason = (request.POST.get("discount_reason") or "").strip()
     referral_name = (request.POST.get("referral_name") or "").strip()
-    
-    # security deposit (advance)
+
     advance_amount = _to_decimal(request.POST.get("security_deposit"), default="0")
 
-    # 🔐 validate branch + plan
+    # -------------------------
+    # VALIDATIONS
+    # -------------------------
     branch = get_object_or_404(Branch, id=branch_id, gym=gym)
     plan = get_object_or_404(MembershipPlan, id=plan_id, branch=branch, is_active=True)
 
-    # ✅ dates
+    # Dates
     try:
         join_date = datetime.strptime(join_date_str, "%Y-%m-%d").date()
     except Exception:
-        messages.error(request, "Invalid Join Date.")
+        messages.error(request, "Invalid Join Date")
         return redirect("Add_members")
 
-    # start_date can be optional, fallback to join_date
-    if start_date_str:
-        try:
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-        except Exception:
-            messages.error(request, "Invalid Start Date.")
-            return redirect("Add_members")
-    else:
-        start_date = join_date
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date() if start_date_str else join_date
+    except Exception:
+        messages.error(request, "Invalid Start Date")
+        return redirect("Add_members")
 
-    # ✅ expiry based on START date (correct for renewals/manual starts)
     expiry_date = start_date + timedelta(days=plan.duration_days - 1)
 
-    # ✅ duplicate phone check
+    # Duplicate phone
     if Member.objects.filter(gym=gym, phone=phone).exists():
         messages.error(request, "Phone number already exists!")
         return redirect("Add_members")
 
-    # ✅ photo upload (file OR camera)
-    photo = request.FILES.get("photo")
-    photo_base64 = request.POST.get("captured_photo")
+    # -------------------------
+    # PHOTO HANDLING (UPDATED)
+    # -------------------------
     photo_file = None
+    photo = request.FILES.get("photo")  # manual upload (if you add name="photo")
+    photo_base64 = request.POST.get("captured_photo")
 
     if photo_base64:
         try:
-            fmt, imgstr = photo_base64.split(";base64,")
-            ext = fmt.split("/")[-1]
-            photo_file = ContentFile(base64.b64decode(imgstr), name=f"{phone}.{ext}")
+            format, imgstr = photo_base64.split(";base64,")
+            ext = format.split("/")[-1]
+
+            photo_file = ContentFile(
+                base64.b64decode(imgstr),
+                name=f"member_{phone}.{ext}"
+            )
         except Exception:
-            messages.error(request, "Invalid captured photo data.")
+            messages.error(request, "Invalid captured image")
             return redirect("Add_members")
+
     elif photo:
         photo_file = photo
 
     # -------------------------
-    # ✅ Financial validations
+    # FINANCIAL LOGIC
     # -------------------------
     plan_price = Decimal(plan.price)
 
-    if advance_amount < 0:
-        messages.error(request, "Security deposit cannot be negative.")
-        return redirect("Add_members")
-
     if discount_amount < 0:
-        messages.error(request, "Discount cannot be negative.")
+        messages.error(request, "Discount cannot be negative")
         return redirect("Add_members")
 
     if discount_amount > plan_price:
-        messages.error(request, "Discount cannot exceed plan amount.")
+        messages.error(request, "Discount exceeds plan price")
         return redirect("Add_members")
 
-    final_amount = plan_price - discount_amount  # payable after discount
+    final_amount = plan_price - discount_amount
 
-    # ✅ if user left paid_amount EMPTY => full payment
+    # If empty → full payment
     if paid_amount_raw in (None, "", "None"):
         paid_amount = final_amount
 
     if paid_amount < 0:
-        messages.error(request, "Paid amount cannot be negative.")
+        messages.error(request, "Paid amount cannot be negative")
         return redirect("Add_members")
 
     if paid_amount > final_amount:
-        messages.error(request, "Paid amount cannot exceed final amount (after discount).")
+        messages.error(request, "Paid exceeds final amount")
         return redirect("Add_members")
 
-    pending = final_amount - paid_amount  # ✅ correct pending
+    pending = final_amount - paid_amount
 
-    inv = generate_invoice_number(gym)
-    
-    if discount_amount >= 0:
-        final_price =Decimal(plan.price) - discount_amount
-    else:
-        final_price=Decimal(plan.price)
-
-    # ✅ CREATE MEMBER
+    # -------------------------
+    # CREATE MEMBER
+    # -------------------------
     member = Member.objects.create(
         gym=gym,
         branch=branch,
@@ -554,11 +547,13 @@ def Add_members(request):
         expiry_date=expiry_date,
         photo=photo_file,
         security_deposit=advance_amount,
-        DOB=DOB
+        DOB=dob if dob else None
     )
 
-    # ✅ CREATE PAYMENT (only if something paid)
-    # If paid_amount is 0, you can still store record, but usually better to store only if >0
+    # -------------------------
+    # CREATE PAYMENT
+    # -------------------------
+    inv = generate_invoice_number(gym)
 
     if paid_amount > 0:
         Payment.objects.create(
@@ -571,15 +566,17 @@ def Add_members(request):
             coverage_start=start_date,
             coverage_end=expiry_date,
             invoice_no=inv,
-            plan_price=plan.price,
+            plan_price=plan_price,
             discount_amount=discount_amount,
             discount_reason=discount_reason,
             referral_name=referral_name,
-            final_amount=final_price,
+            final_amount=final_amount,
             created_by=request.user,
         )
 
-    # WhatsApp message (use final amounts)
+    # -------------------------
+    # WHATSAPP MESSAGE
+    # -------------------------
     msg = (
         f"Thank You for choosing {gym} 💪\n\n"
         f"Hello {member.name} 👋\n"
@@ -593,18 +590,15 @@ def Add_members(request):
         f"⚠️ Pending: ₹{pending}\n"
         f"💳 Method: {payment_method}\n"
         f"📅 Validity: {start_date} → {expiry_date}\n"
-        f"💼 Security Deposit: ₹{advance_amount}\n"
-        f"Thank you 💪"
+        f"💼 Security Deposit: ₹{advance_amount}"
     )
 
     whatsapp_url = f"https://wa.me/91{member.phone}?text={quote(msg)}"
+
     request.session["whatsapp_url"] = whatsapp_url
     request.session["invoice_id"] = inv
-    print("SESSION DATA:", request.session.items())
-    print("INV NUMBER:", request.session.get("inv_number"))
-    print("WHATSAPP URL:", request.session.get("whatsapp_url"))
 
-    messages.success(request, "Member added & payment recorded ✅")
+    messages.success(request, "Member added successfully ✅")
     return redirect("member_list")
 
 # For Getting the Baranch based Planes and Price.
@@ -828,51 +822,67 @@ def delete_member(request, pk):
 def Member_data(request, pk):
     gym = request.user.gym
 
-    member = get_object_or_404(
-        Member,
-        id=pk,
-        gym=gym
-    )
+    member = get_object_or_404(Member, id=pk, gym=gym)
 
     data = {
-        'ids':member.id,
-        "branch_id": member.branch.name,
+        "ids": member.id,
         "name": member.name,
-        "duration_days":member.phone,
-        "joining_date":member.join_date
+        "phone": member.phone,
+        "dob": member.DOB.strftime("%Y-%m-%d") if member.DOB else "",
+        "photo": member.photo.url if member.photo else ""
     }
-    print(pk)
+
     return JsonResponse(data)
 @owner_or_trainer
 def update_member(request, pk):
     gym = request.user.gym
-
     member = get_object_or_404(Member, id=pk, gym=gym)
 
     if request.method == "POST":
+
         name = (request.POST.get("member_name") or "").strip().capitalize()
         phone = (request.POST.get("Phone_number") or "").strip()
+        dob = request.POST.get("date_of_birth")
 
         if not name or not phone:
-            return JsonResponse({
-                "success": False,
-                "error": "Name and phone are required."
-            })
+            return JsonResponse({"success": False, "error": "Name and phone required"})
 
-        # optional duplicate check
         if Member.objects.filter(phone=phone, gym=gym).exclude(id=member.id).exists():
-            return JsonResponse({
-                "success": False,
-                "error": "Phone already exists for another member."
-            })
+            return JsonResponse({"success": False, "error": "Phone already exists"})
 
+        # -------------------------
+        # PHOTO UPDATE (NEW)
+        # -------------------------
+        photo = request.FILES.get("photo")
+        photo_base64 = request.POST.get("captured_photo")
+
+        if photo_base64:
+            try:
+                fmt, imgstr = photo_base64.split(";base64,")
+                ext = fmt.split("/")[-1]
+
+                member.photo = ContentFile(
+                    base64.b64decode(imgstr),
+                    name=f"member_{member.id}.{ext}"
+                )
+            except:
+                return JsonResponse({"success": False, "error": "Invalid image"})
+
+        elif photo:
+            member.photo = photo
+
+        # -------------------------
+        # UPDATE FIELDS
+        # -------------------------
         member.name = name
         member.phone = phone
+        member.DOB = dob if dob else None
+
         member.save()
 
         return JsonResponse({"success": True})
 
-    return JsonResponse({"success": False, "error": "Invalid request"})
+    return JsonResponse({"success": False})
 
 # @owner_or_trainer
 # def member_full_details(request, pk):
@@ -993,8 +1003,7 @@ def member_full_details(request, pk):
         .filter(
             gym=gym,
             member=member,
-            coverage_start=member.start_date,
-            coverage_end=member.expiry_date,
+
         )
         .select_related("plan", "created_by")
         .order_by("-payment_date", "-id")
@@ -1083,6 +1092,7 @@ def member_full_details(request, pk):
             "last_payment_date": last_payment_date.strftime("%Y-%m-%d") if last_payment_date else None,
         }
     }
+    print(data)
 
     return JsonResponse(data)
 
