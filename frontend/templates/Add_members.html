@@ -81,7 +81,7 @@
                                     <input type="hidden" name="captured_photo" id="captured_photo">
 
                                     <!-- File input -->
-                                    <input type="file" id="photo_input" accept="image/*" capture="environment"
+                                    <input type="file" id="photo_input" accept="image/*" 
                                         style="display:none">
 
                                     <!-- Camera Panel -->
@@ -165,13 +165,15 @@
                                     Start date <span class="text-danger">*</span>
                                 </label>
                                 <input type="date" class="form-control" name="Start_date" id="Start_date" required>
+                                
                             </div>
 
                             <div class="col-md-6 mb-4">
                                 <label class="form-label small fw-semibold text-muted">
                                     Expiry date <span class="text-danger">*</span>
                                 </label>
-                                <input type="date" class="form-control" name="expiry_date" id="expiry_date" readonly>
+                                <input type="date" class="form-control" name="expiry_date" id="expiry_date" readonly hidden>
+                                <input type="date" class="form-control" name="expiry_dates" id="expiry_dates" readonly>
                             </div>
 
                             <div class="col-md-6 mb-4">
