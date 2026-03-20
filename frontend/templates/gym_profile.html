@@ -433,6 +433,11 @@
                             </div>
                         </div>
                     </form>
+
+                    
+
+
+
                 </div>
             </div>
         </div>
@@ -476,6 +481,37 @@
             </div>
         </div>
 
+
+        <!-- Admission No Setting  -->
+        <div class="col-12">
+            <div class="card section-card settings-box">
+                <div class="card-body">
+        
+                    <div>
+                        <h6 class="section-heading">Admission Number</h6>
+                        <div class="section-subtitle small">Set the number where to start</div>
+                    </div>
+        
+                    <form method="post"
+                          action="{% url 'update_admission_settings' %}"
+                          enctype="multipart/form-data">
+        
+                        {% csrf_token %}
+        
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Next Invoice Number</label>
+                            <input type="number" class="form-control" name="admission_start_number" value="{{ gym.admission_start_number }}">
+                        </div>
+        
+                        <button type="submit" class="btn btn-primary px-4 mt-3">
+                            Upload Admission No
+                        </button>
+        
+                    </form>
+        
+                </div>
+            </div>
+        </div>
 
     </div>
 </div>
@@ -565,7 +601,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Phone</label>
-                        <input class="form-control" name="phone">
+                        <input class="form-control" name="phone" maxlength="10">
                     </div>
                     <div class="mb-2">
                         <label class="form-label">Address</label>
@@ -604,7 +640,7 @@
 
                         <div class="col-md-6">
                             <label class="form-label">Phone</label>
-                            <input class="form-control" name="phone" placeholder="optional">
+                            <input class="form-control" name="phone" placeholder="optional"  maxlength="10">
                         </div>
                     </div>
 

@@ -23,6 +23,9 @@ class Gym(models.Model):
     phone = models.CharField(max_length=15)
     address = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Admission Number:
+    admission_start_number = models.IntegerField(default=1)
+    
     
     # Whatsapp Settings
     interakt_enabled = models.BooleanField(default=False)
@@ -39,6 +42,8 @@ class Gym(models.Model):
     Auto_archive_In = models.PositiveIntegerField(default=30)
     Auto_archive_enable=models.BooleanField(default=False)
     expiry_reminder_days_before = models.PositiveIntegerField(default=3)
+    
+    
 
     def __str__(self):
         return self.name
@@ -88,6 +93,7 @@ class Member(models.Model):
         ('expired', 'Expired'),
     )
     is_deleted = models.BooleanField(default=False)
+    admission_number = models.CharField(max_length=10,  blank=True, null=True)
     DOB=models.DateField(null=True,blank=True)
     gym = models.ForeignKey(Gym, on_delete=models.CASCADE, related_name="members")
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="members")
@@ -101,6 +107,9 @@ class Member(models.Model):
     security_deposit = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ("gym", "admission_number")
 
     def __str__(self):
         return f"{self.name} ({self.branch.name})"

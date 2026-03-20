@@ -81,7 +81,7 @@
                                     <input type="hidden" name="captured_photo" id="captured_photo">
 
                                     <!-- File input -->
-                                    <input type="file" id="photo_input" accept="image/*" 
+                                    <input type="file" id="photo_input" name="photo" accept="image/*" 
                                         style="display:none">
 
                                     <!-- Camera Panel -->
@@ -309,51 +309,54 @@
 
         const $video = $("#video");
         const video = $video.get(0);
-
+    
         const $canvas = $("#canvas");
         const canvas = $canvas.get(0);
-
+    
         const $preview = $("#photo_preview");
         const $cameraContainer = $("#camera_container");
         const $captured = $("#captured_photo");
-
+    
         let stream = null;
-
+    
         // 🔥 Open Camera
         window.startCamera = async function () {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: "environment" } },
+                    video: { facingMode: "environment" },
                     audio: false
                 });
-
+    
                 if (video) video.srcObject = stream;
                 $cameraContainer.show();
-
+    
             } catch (err) {
                 alert("Camera not supported or permission denied");
             }
         };
-
-        // 📸 Capture Photo
+    
+        // 📸 Capture Photo (Camera → Base64)
         window.capturePhoto = function () {
             if (!video || !canvas) return;
-
+    
             const ctx = canvas.getContext("2d");
-
+    
             canvas.width = video.videoWidth || 300;
             canvas.height = video.videoHeight || 300;
-
+    
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            const imageData = canvas.toDataURL("image/jpeg", 0.8);
-
+    
+            const imageData = canvas.toDataURL("image/jpeg", 0.7); // 🔥 compress
+    
             $preview.attr("src", imageData);
             $captured.val(imageData);
-
+    
+            // 🔥 clear file input (important)
+            $("#photo_input").val("");
+    
             stopCamera();
         };
-
+    
         // ❌ Stop Camera
         window.stopCamera = function () {
             if (stream) {
@@ -362,26 +365,22 @@
             }
             $cameraContainer.hide();
         };
-
-        // 📁 Upload from device
+    
+        // 📁 Upload from device (NO BASE64)
         $("#photo_input").on("change", function (event) {
             const file = event.target.files[0];
             if (!file) return;
-
-            stopCamera(); // stop camera if open
-
-            const reader = new FileReader();
-
-            reader.onload = function (e) {
-                const imageData = e.target.result;
-
-                $preview.attr("src", imageData);
-                $captured.val(imageData);
-            };
-
-            reader.readAsDataURL(file);
+    
+            stopCamera();
+    
+            // 🔥 Preview only (no base64 sending)
+            const url = URL.createObjectURL(file);
+            $preview.attr("src", url);
+    
+            // 🔥 IMPORTANT: clear base64 so backend uses FILE
+            $captured.val("");
         });
-
+    
     });
     $(document).ready(function () {
 

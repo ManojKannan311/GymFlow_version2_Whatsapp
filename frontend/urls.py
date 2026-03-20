@@ -71,5 +71,6 @@ urlpatterns = [
     path("members/import/",preview_members_excel, name="preview_members_excel"),
     path("members/import/confirm/",confirm_import_members, name="confirm_import_members"),
 
-
+    #Admission number
+    path("update-admission-settings/", update_admission_settings, name="update_admission_settings"),
 ]

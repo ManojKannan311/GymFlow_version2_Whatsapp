@@ -111,6 +111,60 @@ def reset_user_password(request, user_id):
 
     return JsonResponse({"success": True})
 
+from django.db.models.functions import Cast, Substr
+from django.db.models import Max, IntegerField
+
+def generate_admission_number(gym):
+    start_number = gym.admission_start_number or 1
+
+    max_number = (
+        Member.objects
+        .filter(gym=gym, admission_number__startswith="ADM-")
+        .annotate(
+            num=Cast(Substr("admission_number", 5), IntegerField())
+        )
+        .aggregate(max_num=Max("num"))["max_num"]
+    )
+
+    # If no members exist → use gym start number
+    if max_number is None:
+        new_number = start_number
+    else:
+        # ALWAYS continue from actual DB max
+        new_number = max(max_number + 1, start_number)
+
+    return f"ADM-{new_number:04d}"
+
+def update_admission_settings(request):
+    if request.method == "POST":
+        gym = request.user.gym
+        start_number = request.POST.get("admission_start_number")
+
+        if not start_number:
+            messages.error(request, "Please enter a starting number")
+            return redirect("settings_page")
+
+        try:
+            start_number = int(start_number)
+        except ValueError:
+            messages.error(request, "Invalid number")
+            return redirect("settings_page")
+
+        if start_number < 1:
+            messages.error(request, "Start number must be greater than 0")
+            return redirect("settings_page")
+
+        # 🔥 NO BLOCKING (Advanced system allows change)
+        gym.admission_start_number = start_number
+        gym.save()
+
+        messages.success(
+            request,
+            "Admission start number updated. System will auto-adjust next numbers safely."
+        )
+        return redirect("gym_profile")
+
+    return redirect("gym_profile")
 
 def update_member_statuses(gym):
     today = timezone.localdate()
@@ -485,14 +539,18 @@ def Add_members(request):
     # PHOTO HANDLING (UPDATED)
     # -------------------------
     photo_file = None
-    photo = request.FILES.get("photo")  # manual upload (if you add name="photo")
+    photo = request.FILES.get("photo")   # ✅ direct file
     photo_base64 = request.POST.get("captured_photo")
-
-    if photo_base64:
+    
+    if photo:
+        # ✅ BEST: use file directly (fast + small size)
+        photo_file = photo
+    
+    elif photo_base64:
         try:
             format, imgstr = photo_base64.split(";base64,")
             ext = format.split("/")[-1]
-
+    
             photo_file = ContentFile(
                 base64.b64decode(imgstr),
                 name=f"member_{phone}.{ext}"
@@ -500,9 +558,6 @@ def Add_members(request):
         except Exception:
             messages.error(request, "Invalid captured image")
             return redirect("Add_members")
-
-    elif photo:
-        photo_file = photo
 
     # -------------------------
     # FINANCIAL LOGIC
@@ -532,12 +587,23 @@ def Add_members(request):
         return redirect("Add_members")
 
     pending = final_amount - paid_amount
+    
+    
+    # ------------------------
+    # admission_number 
+    # ------------------------
+
+    admission_number = request.POST.get("admission_number")
+
+    if not admission_number:
+        admission_number = generate_admission_number(gym)
 
     # -------------------------
     # CREATE MEMBER
     # -------------------------
     member = Member.objects.create(
         gym=gym,
+        admission_number=admission_number,
         branch=branch,
         name=name.capitalize(),
         phone=phone,
@@ -856,7 +922,11 @@ def update_member(request, pk):
         photo = request.FILES.get("photo")
         photo_base64 = request.POST.get("captured_photo")
 
-        if photo_base64:
+        if photo:
+            # ✅ BEST (fast + safe)
+            member.photo = photo
+
+        elif photo_base64:
             try:
                 fmt, imgstr = photo_base64.split(";base64,")
                 ext = fmt.split("/")[-1]
@@ -867,9 +937,6 @@ def update_member(request, pk):
                 )
             except:
                 return JsonResponse({"success": False, "error": "Invalid image"})
-
-        elif photo:
-            member.photo = photo
 
         # -------------------------
         # UPDATE FIELDS
@@ -1269,7 +1336,11 @@ def renewals_page(request):
 
     # search by name OR phone
     if q:
-        members = members.filter(Q(name__icontains=q) | Q(phone__icontains=q))
+        members = members.filter(
+            Q(name__icontains=q) |
+            Q(phone__icontains=q) |
+            Q(admission_number__icontains=q)
+        )
 
     # branch filter
     if branch_id:
@@ -1330,7 +1401,9 @@ def paid_members_page(request):
 
     if q:
         payments = payments.filter(
-            Q(member__name__icontains=q) | Q(member__phone__icontains=q)
+            Q(member__name__icontains=q) |
+            Q(member__phone__icontains=q) |
+            Q(member__admission_number__icontains=q)  # ✅ NEW
         )
 
     # ✅ Aggregate by member (one row per member)
@@ -1401,7 +1474,11 @@ def unpaid_members_page(request):
     ).select_related("branch", "plan")
 
     if q:
-        members = members.filter(Q(name__icontains=q) | Q(phone__icontains=q))
+        members = members.filter(
+            Q(name__icontains=q) |
+            Q(phone__icontains=q) |
+            Q(admission_number__icontains=q)
+        )
 
     if branch_id:
         members = members.filter(branch_id=branch_id)
@@ -1634,7 +1711,11 @@ def pending_payments_page(request):
     )
 
     if q:
-        members_qs = members_qs.filter(Q(name__icontains=q) | Q(phone__icontains=q))
+        members = members.filter(
+            Q(name__icontains=q) |
+            Q(phone__icontains=q) |
+            Q(admission_number__icontains=q)
+        )
 
     if branch_id:
         members_qs = members_qs.filter(branch_id=branch_id)
@@ -1697,6 +1778,7 @@ def pending_payments_page(request):
             "member_id": m.id,
             "name": m.name,
             "phone": m.phone,
+            "admission":m.admission_number,
             "branch": m.branch.name if m.branch else "",
             "plan": m.plan.name if m.plan else "",
             "plan_price": m.plan_price,
@@ -2830,7 +2912,21 @@ def restore_member(request, member_id):
     messages.success(request, f"{member.name} restored successfully.")
     return redirect("archived_members")
 
+import numpy as np
+def clean_value(val):
+    if pd.isna(val):
+        return None
+    if isinstance(val, (pd.Timestamp, )):
+        return val.strftime("%Y-%m-%d")
+    if isinstance(val, (np.integer,)):
+        return int(val)
+    if isinstance(val, (np.floating,)):
+        return float(val)
+    return str(val).strip()
 
+def safe_date(val):
+    val = pd.to_datetime(val, errors="coerce")
+    return val.strftime("%Y-%m-%d") if pd.notna(val) else None
 
 # Bulk Importing
 
@@ -2853,21 +2949,22 @@ def preview_members_excel(request):
 
         for index, row in df.iterrows():
 
-            name = str(row.get("name")).strip()
-            phone = str(row.get("phone")).strip()
-            branch_name = str(row.get("branch")).strip()
-            plan_name = str(row.get("plan")).strip()
+            name = clean_value(row.get("name"))
+            Admission = clean_value(row.get("Admission"))
+            phone = clean_value(row.get("phone"))
+            branch_name = clean_value(row.get("branch"))
+            plan_name = clean_value(row.get("plan"))
+
+            plan_price = clean_value(row.get("plan_price"))
+            discount = clean_value(row.get("discount"))
+            paid_amount = clean_value(row.get("paid_amount"))
+            payment_mode = clean_value(row.get("payment_mode"))
 
             error = None
-
-            # Convert dates safely
-            join_date = row.get("join_date")
-            start_date = row.get("start_date")
-            expiry_date = row.get("expiry_date")
-
-            join_date = join_date.strftime("%Y-%m-%d") if pd.notna(join_date) else None
-            start_date = start_date.strftime("%Y-%m-%d") if pd.notna(start_date) else None
-            expiry_date = expiry_date.strftime("%Y-%m-%d") if pd.notna(expiry_date) else None
+            date_of_birth = safe_date(row.get("Dob"))
+            join_date = safe_date(row.get("join_date"))
+            start_date = safe_date(row.get("start_date"))
+            expiry_date = safe_date(row.get("expiry_date"))
 
             # Check duplicate phone
             if Member.objects.filter(gym=gym, phone=phone).exists():
@@ -2891,17 +2988,19 @@ def preview_members_excel(request):
 
             preview_data.append({
                 "row": index + 1,
+                "Admission": Admission,
                 "name": name,
+                "Dob":date_of_birth,
                 "phone": phone,
                 "branch": branch_name,
                 "plan": plan_name,
                 "join_date": join_date,
                 "start_date": start_date,
                 "expiry_date": expiry_date,
-                "plan_price": row.get("plan_price"),
-                "discount": row.get("discount"),
-                "paid_amount": row.get("paid_amount"),
-                "payment_mode": row.get("payment_mode"),
+                "plan_price": plan_price,
+                "discount": discount,
+                "paid_amount": paid_amount,
+                "payment_mode": payment_mode,
                 "error": error
             })
 
@@ -2915,7 +3014,6 @@ def preview_members_excel(request):
 
 @login_required
 def confirm_import_members(request):
-
     gym = request.user.gym
     data = request.session.get("import_data")
 
@@ -2927,55 +3025,91 @@ def confirm_import_members(request):
 
     for row in data:
 
-        if row["error"]:
+        # 🔥 Normalize keys (VERY IMPORTANT)
+        row = {k.strip(): v for k, v in row.items()}
+
+        if row.get("error"):
             continue
 
-        branch = Branch.objects.get(name=row["branch"], gym=gym)
-        plan = MembershipPlan.objects.filter(name=row["plan"], branch=branch).first()
+        try:
+            branch = Branch.objects.get(name=row.get("branch"), gym=gym)
+            plan = MembershipPlan.objects.filter(
+                name=row.get("plan"),
+                branch=branch
+            ).first()
 
-        member = Member.objects.create(
-            gym=gym,
-            branch=branch,
-            name=row["name"].capitalize(),
-            phone=row["phone"],
-            join_date=row["join_date"],
-            start_date=row["start_date"],
-            expiry_date=row["expiry_date"],
-            plan=plan
-        )
+            # -------------------------
+            # ✅ ADMISSION NUMBER FIX
+            # -------------------------
+            admission_number = row.get("Admission")
 
-        plan_price = Decimal(row["plan_price"] or 0)
-        discount = Decimal(row["discount"] or 0)
-        paid_amount = Decimal(row["paid_amount"] or 0)
+            if not admission_number:
+                admission_number = generate_admission_number(gym)
 
-        final_amount = plan_price - discount
-        payment_date = datetime.strptime(row["start_date"], "%Y-%m-%d").date()
-        coverage_start = datetime.strptime(row["start_date"], "%Y-%m-%d").date()
-        coverage_end = datetime.strptime(row["expiry_date"], "%Y-%m-%d").date()
-    
-    
-        if paid_amount > 0:
-            Payment.objects.create(
-        gym=gym,
-        member=member,
-        plan=plan,
-        invoice_no=generate_invoice_number(gym),
-        amount=paid_amount,
-        payment_mode=row["payment_mode"],
-        payment_date=payment_date,
-        coverage_start=coverage_start,
-        coverage_end=coverage_end,
-        plan_price=plan_price,
-        discount_amount=discount,
-        final_amount=final_amount,
-        created_by=request.user
-    )
+            # ❗ Prevent duplicate crash
+            if Member.objects.filter(gym=gym, admission_number=admission_number).exists():
+                admission_number = generate_admission_number(gym)
 
-        created += 1
+            # -------------------------
+            # DATE PARSING
+            # -------------------------
+            join_date = datetime.strptime(row.get("join_date"), "%Y-%m-%d").date()
+            start_date = datetime.strptime(row.get("start_date"), "%Y-%m-%d").date()
+            expiry_date = datetime.strptime(row.get("expiry_date"), "%Y-%m-%d").date()
+            date_of_birth = datetime.strptime(row.get("Dob"), "%Y-%m-%d").date()
+            # -------------------------
+            # CREATE MEMBER
+            # -------------------------
+            member = Member.objects.create(
+                gym=gym,
+                branch=branch,
+                admission_number=admission_number,
+                name=(row.get("name") or "").capitalize(),
+                phone=row.get("phone"),
+                DOB=date_of_birth,
+                join_date=join_date,
+                start_date=start_date,
+                expiry_date=expiry_date,
+                plan=plan
+            )
 
-    request.session.pop("import_data")
+            # -------------------------
+            # FINANCIALS
+            # -------------------------
+            plan_price = Decimal(row.get("plan_price") or 0)
+            discount = Decimal(row.get("discount") or 0)
+            paid_amount = Decimal(row.get("paid_amount") or 0)
 
-    messages.success(request, f"{created} Members Imported Successfully")
+            final_amount = plan_price - discount
 
+            # -------------------------
+            # PAYMENT
+            # -------------------------
+            if paid_amount > 0:
+                Payment.objects.create(
+                    gym=gym,
+                    member=member,
+                    plan=plan,
+                    invoice_no=generate_invoice_number(gym),
+                    amount=paid_amount,
+                    payment_mode=row.get("payment_mode"),
+                    payment_date=start_date,
+                    coverage_start=start_date,
+                    coverage_end=expiry_date,
+                    plan_price=plan_price,
+                    discount_amount=discount,
+                    final_amount=final_amount,
+                    created_by=request.user
+                )
+
+            created += 1
+
+        except Exception as e:
+            print("Import error:", e)
+            continue
+
+    request.session.pop("import_data", None)
+
+    messages.success(request, f"{created} Members Imported Successfully ✅")
     return redirect("member_list")
  

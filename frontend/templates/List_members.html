@@ -86,7 +86,7 @@
                                 </div>
                                 {% endif %}
 
-                                <div class="fw-semibold">{{ m.name }}</div>
+                                <div class="fw-semibold">{{ m.name }} - {{ m.admission_number }} </div>
                             </div>
                         </td>
                         <td class="py-3">{{ m.phone }}</td>
@@ -536,7 +536,6 @@
     
         let stream = null;
     
-        // 🎯 Helper → detect context (Add or Edit)
         function getContext() {
             if ($("#Member_edit").hasClass("show")) {
                 return {
@@ -544,7 +543,8 @@
                     canvas: document.getElementById("edit_canvas"),
                     preview: $("#edit_photo_preview"),
                     container: $("#edit_camera_container"),
-                    captured: $("#edit_captured_photo")
+                    captured: $("#edit_captured_photo"),
+                    fileInput: $("#edit_photo_input")
                 };
             } else {
                 return {
@@ -552,7 +552,8 @@
                     canvas: document.getElementById("canvas"),
                     preview: $("#photo_preview"),
                     container: $("#camera_container"),
-                    captured: $("#captured_photo")
+                    captured: $("#captured_photo"),
+                    fileInput: $("#photo_input")
                 };
             }
         }
@@ -575,26 +576,26 @@
             }
         };
     
-        // 📸 Capture Photo
+        // 📸 Capture Photo (BASE64 only for camera)
         window.capturePhoto = function () {
-            const ctxObj = getContext();
+            const ctx = getContext();
     
-            const video = ctxObj.video;
-            const canvas = ctxObj.canvas;
+            if (!ctx.video || !ctx.canvas) return;
     
-            if (!video || !canvas) return;
+            const c = ctx.canvas.getContext("2d");
     
-            const ctx = canvas.getContext("2d");
+            ctx.canvas.width = ctx.video.videoWidth || 300;
+            ctx.canvas.height = ctx.video.videoHeight || 300;
     
-            canvas.width = video.videoWidth || 300;
-            canvas.height = video.videoHeight || 300;
+            c.drawImage(ctx.video, 0, 0, ctx.canvas.width, ctx.canvas.height);
     
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.canvas.toDataURL("image/jpeg", 0.7);
     
-            const imageData = canvas.toDataURL("image/jpeg", 0.8);
+            ctx.preview.attr("src", imageData);
+            ctx.captured.val(imageData);
     
-            ctxObj.preview.attr("src", imageData);
-            ctxObj.captured.val(imageData);
+            // 🔥 clear file input (important)
+            ctx.fileInput.val("");
     
             stopCamera();
         };
@@ -621,21 +622,19 @@
             handleUpload(event, "#edit_photo_preview", "#edit_captured_photo");
         });
     
-        // 🔁 Shared upload function
+        // 🔁 FIXED upload (NO BASE64)
         function handleUpload(event, previewId, hiddenId) {
             const file = event.target.files[0];
             if (!file) return;
     
             stopCamera();
     
-            const reader = new FileReader();
+            // ✅ Preview only
+            const url = URL.createObjectURL(file);
+            $(previewId).attr("src", url);
     
-            reader.onload = function (e) {
-                $(previewId).attr("src", e.target.result);
-                $(hiddenId).val(e.target.result);
-            };
-    
-            reader.readAsDataURL(file);
+            // ❌ IMPORTANT: clear base64
+            $(hiddenId).val("");
         }
     
     });
