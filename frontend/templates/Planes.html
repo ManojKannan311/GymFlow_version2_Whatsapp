@@ -21,35 +21,74 @@
 
     </div>
     <div class="card shadow-sm border-0 mb-3 ">
-        <div class="card-body">
-            <div class="row g-2">
-
-                <div class="col-12 col-md-4">
-                    <input type="text" id="searchInput" class="form-control"
-                        placeholder="Search Branch or Package name">
-                </div>
-
-                <div class="col-12 col-md-4">
-                    <select id="branchFilter" class="form-select">
-                        <option value="">Duration</option>
+        <div class="card shadow-sm border-0 mb-3">
+            <div class="card-body">
+              
+              <form method="get">
+                <div class="row g-2 align-items-end">
+          
+                  <!-- Search -->
+                  <div class="col-12 col-md-4">
+                    <label class="form-label small text-muted">Search</label>
+                    <input type="text"
+                           name="q"
+                           value="{{ request.GET.q }}"
+                           class="form-control"
+                           placeholder="Search Branch or Package name">
+                  </div>
+          
+                  <!-- Duration -->
+                  <div class="col-12 col-md-3">
+                    <label class="form-label small text-muted">Duration</label>
+                    <select id="branchFilter" name="duration" class="form-select">
+                        <option value="">All Duration</option>
+                    
+                        {% for d in durations %}
+                            <option value="{{ d }}" {% if request.GET.duration == d %}selected{% endif %}>
+                                {{ d }}
+                            </option>
+                        {% endfor %}
                     </select>
-                </div>
-
-                <div class="col-12 col-md-4">
-                    <select id="statusFilter" class="form-select">
-                        <option value="">All Status</option>
-                        <option value="Active">Active</option>
-                        <option value="Disabled">Disabled</option>
-
+                  </div>
+          
+                  <!-- Status -->
+                  <div class="col-12 col-md-3">
+                    <label class="form-label small text-muted">Status</label>
+                    <select name="status" class="form-select">
+                      <option value="">All Status</option>
+                      <option value="Active" {% if request.GET.status == "Active" %}selected{% endif %}>Active</option>
+                      <option value="Disabled" {% if request.GET.status == "Disabled" %}selected{% endif %}>Disabled</option>
                     </select>
+                  </div>
+          
+                  <!-- Buttons -->
+                  <div class="col-12 col-md-2 d-flex gap-2">
+          
+                    <!-- Filter Button -->
+                    <button type="submit" class="btn btn-primary w-100">
+                      Filter
+                    </button>
+          
+                    <!-- Reset -->
+                    <a href="{% url 'plans' %}" class="btn btn-outline-secondary w-100">
+                      Reset
+                    </a>
+          
+                  </div>
+          
                 </div>
+              </form>
+          
             </div>
-        </div>
+          </div>
     </div>
-    <div class="card shadow-sm">
-        <div class="card-body table-responsive">
 
+    <!-- Table -->
+    <div class="card shadow-sm d-none d-md-block">
+        <div class="card-body table-responsive">
+    
             <table class="table table-hover align-middle mb-3" id="membersTable">
+    
                 <thead class="table">
                     <tr>
                         <th class="fw-semibold text-muted">#</th>
@@ -58,12 +97,13 @@
                         <th class="fw-semibold text-muted">Duration days</th>
                         <th class="fw-semibold text-muted">Price</th>
                         <th class="fw-semibold text-muted">Active</th>
+    
                         {% if request.user.role == "ADMIN" %}
                         <th class="fw-semibold text-muted text-center">Action</th>
                         {% endif %}
                     </tr>
                 </thead>
-
+    
                 <tbody>
                     {% for m in plans %}
                     <tr>
@@ -71,7 +111,8 @@
                         <td class="py-3">{{ m.branch.name }}</td>
                         <td class="py-3">{{ m.name }}</td>
                         <td class="py-3">{{ m.duration_days }}</td>
-                        <td class="py-3">{{ m.price }}{{p.is_active}}</td>
+                        <td class="py-3">₹{{ m.price }}</td>
+    
                         <td class="py-3">
                             {% if m.is_active %}
                             <span class="badge rounded-pill bg-success">Active</span>
@@ -79,45 +120,125 @@
                             <span class="badge rounded-pill bg-secondary">Disabled</span>
                             {% endif %}
                         </td>
-
+    
                         {% if request.user.role == "ADMIN" %}
                         <td class="text-center py-3">
                             <div class="d-flex justify-content-center align-items-center gap-2">
-                                
-                                <!-- Toggle Active -->
+    
                                 <div class="form-check form-switch m-0">
-                                    <input class="form-check-input plan-toggle" type="checkbox" data-id="{{ m.id }}" {%if m.is_active %}checked{% endif %}>
+                                    <input class="form-check-input plan-toggle"
+                                           type="checkbox"
+                                           data-id="{{ m.id }}"
+                                           {% if m.is_active %}checked{% endif %}>
                                 </div>
-
-                                <!-- Edit -->
-                                <a href="#" class="btn btn-sm btn-light border" title="Edit" id="edit-plan-btn"
-                                    data-bs-toggle="modal" data-bs-target="#Plan_edit" data-id="{{ m.id }}">
+    
+                                <!-- FIX: use class instead of id -->
+                                <button class="btn btn-sm btn-light border edit-plan-btn"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#Plan_edit"
+                                        data-id="{{ m.id }}">
                                     <i class="bi bi-pencil"></i>
-                                </a>
-
-                                <!-- Delete -->
-                                <a href="#" class="btn btn-sm btn-danger" title="Delete" id="delete-plan-btn"
-                                    data-id="{{ m.id }}">
+                                </button>
+    
+                                <button class="btn btn-sm btn-danger delete-plan-btn"
+                                        data-id="{{ m.id }}">
                                     <i class="bi bi-trash"></i>
-                                </a>
-
+                                </button>
+    
                             </div>
                         </td>
                         {% endif %}
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center py-5">
+                        <td colspan="7" class="text-center py-5">
                             <i class="bi bi-people fs-2 text-muted"></i>
-                            <p class="text-muted mt-2 mb-0">No members yet</p>
+                            <p class="text-muted mt-2 mb-0">No Plan yet</p>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
+    
+            </table>
+    
         </div>
     </div>
 
+    <div class="d-block d-md-none">
+
+        {% for p in plans %}
+        <div class="card mb-3 shadow-sm border-0" style="border-radius:14px;">
+    
+            <div class="card-body p-3">
+    
+                <div class="d-flex justify-content-between align-items-start">
+    
+                    <div>
+                        <h6 class="fw-bold mb-1">{{ p.name }}</h6>
+                        <small class="text-muted">{{ p.branch.name }}</small>
+                    </div>
+    
+                    {% if p.is_active %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-secondary">Disabled</span>
+                    {% endif %}
+    
+                </div>
+    
+                <hr class="my-2">
+    
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Duration</span>
+                    <strong>{{ p.duration_days }} days</strong>
+                </div>
+    
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Price</span>
+                    <strong class="text-primary">₹{{ p.price }}</strong>
+                </div>
+    
+            </div>
+    
+            {% if request.user.role == "ADMIN" %}
+            <div class="card-footer bg-white d-flex gap-2">
+    
+                <div class="form-check form-switch">
+                    <input class="form-check-input plan-toggle"
+                           type="checkbox"
+                           data-id="{{ p.id }}"
+                           {% if p.is_active %}checked{% endif %}>
+                </div>
+    
+                <button class="btn btn-light flex-fill edit-plan-btn"
+                        data-id="{{ p.id }}">
+                    <i class="bi bi-pencil"></i>
+                </button>
+    
+                <button class="btn btn-danger flex-fill delete-plan-btn"
+                        data-id="{{ p.id }}">
+                    <i class="bi bi-trash"></i>
+                </button>
+    
+            </div>
+            {% endif %}
+    
+        </div>
+        {% empty %}
+        <div class="text-center text-muted py-5">
+            No Plans Found
+        </div>
+        {% endfor %}
+    
+    </div>
+
+
+
 </div>
+
+</div>
+
+
 
 <!-- Plan Edit -->
 
@@ -142,7 +263,7 @@
                             </label>
                             <select class="form-select" name="branch" id="branch_id" required>
                                 <option value="">Select Branch</option>
-                                {% for branch in add_new %}
+                                {% for branch in branches %}
                                 <option value="{{ branch.id }}">{{ branch.name }}</option>
                                 {% endfor %}
                             </select>
@@ -201,103 +322,9 @@
 <!-- Plan Edit -->
 
 <script>
-    $(document).ready(function () {
 
-        // Column indexes for PLANS table
-        const COL_BRANCH = 1;
-        const COL_NAME = 2;
-        const COL_DURATION = 3;
-        const COL_STATUS = 5;
-
-        // ✅ Build Duration dropdown from table values (col 3)
-        let durations = new Set();
-
-        $("#membersTable tbody tr").each(function () {
-            let d = $(this).find(`td:eq(${COL_DURATION})`).text().trim();
-            if (d) durations.add(d);
-        });
-
-        durations = Array.from(durations).sort((a, b) => parseInt(a) - parseInt(b));
-        durations.forEach(function (d) {
-            $("#branchFilter").append(`<option value="${d}">${d} days</option>`);
-        });
-
-        function filterTable() {
-            let search = $("#searchInput").val().toLowerCase().trim();
-            let durationVal = $("#branchFilter").val();   // this is duration filter
-            let statusVal = $("#statusFilter").val();     // Active / Disabled
-
-            $("#membersTable tbody tr").each(function () {
-                let branch = $(this).find(`td:eq(${COL_BRANCH})`).text().toLowerCase().trim();
-                let name = $(this).find(`td:eq(${COL_NAME})`).text().toLowerCase().trim();
-
-                let rowDuration = $(this).find(`td:eq(${COL_DURATION})`).text().trim();  // "30"
-                let rowStatus = $(this).find(`td:eq(${COL_STATUS})`).text().trim();      // "Active" / "Disabled"
-
-                // search matches branch or plan name
-                let matchSearch = !search || branch.includes(search) || name.includes(search);
-
-                // duration match (exact)
-                let matchDuration = !durationVal || rowDuration === durationVal;
-
-                // status match (exact)
-                let matchStatus = !statusVal || rowStatus === statusVal;
-
-                $(this).toggle(matchSearch && matchDuration && matchStatus);
-            });
-        }
-
-        $("#searchInput").on("keyup", filterTable);
-        $("#branchFilter, #statusFilter").on("change", filterTable);
-
-        // ✅ Export visible rows to CSV
-        $("#exportCsv").on("click", function () {
-            exportTableToCSV("plans.csv");
-        });
-
-        function exportTableToCSV(filename) {
-            let rows = [];
-
-            // Header
-            let headers = [];
-            $("#membersTable thead th").each(function () {
-                headers.push($(this).text().trim());
-            });
-            rows.push(headers);
-
-            // Visible rows only
-            $("#membersTable tbody tr:visible").each(function () {
-                let row = [];
-                $(this).find("td").each(function () {
-                    row.push($(this).text().trim());
-                });
-                rows.push(row);
-            });
-
-            let csvContent = rows.map(r => r.map(csvEscape).join(",")).join("\n");
-
-            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-            const url = URL.createObjectURL(blob);
-
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            URL.revokeObjectURL(url);
-        }
-
-        function csvEscape(value) {
-            if (value == null) return "";
-            value = String(value).replace(/\r?\n|\r/g, " ");
-            if (value.includes('"')) value = value.replace(/"/g, '""');
-            if (value.includes(",") || value.includes('"')) value = `"${value}"`;
-            return value;
-        }
-
-    });
+    
+    
 
 
     $(".plan-toggle").change(function () {
@@ -320,8 +347,8 @@
 
     <!-- Getting data for Update -->
 
-    $(document).on("click", "#edit-plan-btn", function () {
-
+    $(document).on("click", ".edit-plan-btn", function () {
+        console.log("Get")
         let planId = $(this).data("id");
 
         $.get(`/plan/${planId}/data/`, function (data) {
@@ -358,7 +385,7 @@
         });
     });
 
-    $(document).on("click", "#delete-plan-btn", function (e) {
+    $(document).on("click", ".delete-plan-btn", function (e) {
 
         let planId = $(this).data("id");
 

@@ -138,10 +138,37 @@
     padding: 10px 16px;
     font-weight: 700;
   }
+  .modal {
+    z-index: 1060 !important;
+  }
+  
+  .modal-backdrop {
+    z-index: 1055 !important;
+  }
+  
+  .floating-menu {
+    z-index: 1050 !important; /* LOWER than modal */
+  }
 </style>
 
 
+
+
 <div class="container-fluid">
+  <div id="pageLoader" 
+     style="position:fixed;top:0;left:0;width:100%;height:100%;
+            background:rgba(255,255,255,0.7);
+            z-index:9999;
+            display:none;
+            align-items:center;
+            justify-content:center;">
+
+  <div class="text-center">
+    <div class="spinner-border text-primary"></div>
+    <div class="mt-2 small text-muted">Loading...</div>
+  </div>
+
+</div>
 
   <!-- Header Section -->
   <div class="row mb-4 mt-3 ">
@@ -169,37 +196,61 @@
   </div>
   <div class="card shadow-sm border-0 mb-3">
     <div class="card-body">
-      <div class="row g-3 align-items-end">
-  
-        <div class="col-12 col-md-5">
-          <label class="form-label small text-muted mb-1">Search</label>
-          <input type="text" id="searchInput" class="form-control" placeholder="Search name or phone">
-        </div>
-  
-        <div class="col-12 col-md-4">
-          <label class="form-label small text-muted mb-1">Branch</label>
-          <select id="branchFilter" class="form-select">
-            <option value="">All Branches</option>
-          </select>
-        </div>
-  
-        <div class="col-12 col-md-3">
-          <div class=" px-3  text-md-end">
-            <div class="text-muted small">Branch Total</div>
-            <div class="h4 fw-bold text-danger mb-0">
-              ₹ <span id="totalPendingTop">{{ total_pending|floatformat:2 }}</span>
-            </div>
+      <form method="get">
+        <div class="row g-3 align-items-end">
+      
+          <!-- Search -->
+          <div class="col-12 col-md-5">
+            <label class="form-label small text-muted mb-1">Search</label>
+            <input type="text"
+                   name="q"
+                   value="{{ q }}"
+                   class="form-control"
+                   placeholder="Search name or phone">
           </div>
+      
+          <!-- Branch -->
+          <div class="col-12 col-md-4">
+            <label class="form-label small text-muted mb-1">Branch</label>
+            <select name="branch" class="form-select">
+              <option value="">All Branches</option>
+              {% for b in branches %}
+                <option value="{{ b.id }}"
+                  {% if branch_id == b.id|stringformat:"s" %}selected{% endif %}>
+                  {{ b.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+      
+          <!-- Buttons -->
+          <div class="col-12 col-md-3 d-flex gap-2">
+            
+            <!-- Filter -->
+            <button type="submit" class="btn btn-primary w-100">
+             <span>Filter</span>
+              <span id="filterLoader" class="d-none">
+                <span class="spinner-border spinner-border-sm ms-2"></span>
+              </span>
+            </button>
+      
+            <!-- Reset -->
+            <a href="{% url 'pending_payments' %}" 
+               class="btn btn-outline-secondary w-100">
+              Reset
+            </a>
+      
+          </div>
+      
         </div>
-  
-      </div>
+      </form>
     </div>
   </div>
 
   <!-- Table Section -->
   <div class="row">
     <div class="col-12">
-      <div class="card shadow-sm border-0 rounded-3">
+      <div class="card shadow-sm border-0 rounded-3 d-none d-md-block">
         <div class="card-body table-responsive">
 
           <div class="table-responsive">
@@ -314,94 +365,219 @@
     </div>
   </div>
 
-</div>
 
-<div class="modal fade pm-modal" id="collectModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-md">
-    <div class="modal-content">
+  <div class="modal fade pm-modal" id="collectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-md">
+      <div class="modal-content">
+        <!-- Header -->
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
+              style="width:34px;height:34px;background:rgba(13,110,253,.10);">
+              <i class="bi bi-cash-coin text-primary"></i>
+            </span>
+            Collect Pending Payment
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+  
+        <!-- Body -->
+        <div class="modal-body">
+          <input type="hidden" id="pm_member_id">
+  
+          <!-- Member info (premium card) -->
+          <div class="pm-member mb-3">
+            <div class="pm-avatar" id="pm_avatar">M</div>
+            <div>
+              <div class="name" id="pm_member_name">-</div>
+              <div class="phone" id="pm_member_phone">-</div>
+            </div>
+          </div>
+  
+          <!-- Plan + dates + pending -->
+          <div class="pm-card mb-3">
+            <div class="label">Plan</div>
+            <div class="value" id="pm_plan_name">-</div>
+  
+            <div class="row g-2 mt-2">
+              <div class="col-6">
+                <div class="label">Start</div>
+                <div class="value" id="pm_start_date">-</div>
+              </div>
+              <div class="col-6">
+                <div class="label">Expiry</div>
+                <div class="value" id="pm_expiry_date">-</div>
+              </div>
+            </div>
+          </div>
+  
+          <div class="pm-card pm-pending mb-3">
+            <div class="label">Pending Amount</div>
+            <div class="value">₹<span id="pm_balance">0.00</span></div>
+          </div>
+  
+          <!-- Error -->
+          <div class="pm-error mb-3 d-none" id="pm_error"></div>
+  
+          <!-- Inputs -->
+          <div class="row g-2">
+            <div class="col-12 col-md-6">
+              <label class="form-label">Amount</label>
+              <input type="number" class="form-control" id="pm_amount" min="1" step="0.01" placeholder="Enter amount">
+            </div>
+  
+            <div class="col-12 col-md-6">
+              <label class="form-label">Payment Mode</label>
+              <select class="form-select" id="pm_mode">
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+              </select>
+            </div>
+          </div>
+  
+          <div class="text-muted small mt-2">
+            Tip: enter only the balance amount to close pending.
+          </div>
+        </div>
+  
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary" id="pm_save_btn">
+            <i class="bi bi-check2-circle me-1"></i> Save Payment
+          </button>
+        </div>
+  
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE VIEW -->
+<div class="d-block d-md-none">
+
+  {% for r in pending_list %}
+
+  <div class="card mb-3 border-0 shadow-sm pending-card"
+       data-name="{{ r.name|lower }}"
+       data-phone="{{ r.phone }}"
+       data-branch="{{ r.branch }}">
+  <div class="card mb-3 border-0 shadow-sm" style="border-radius:12px;">
+    <div class="card-body p-3">
 
       <!-- Header -->
-      <div class="modal-header">
-        <h5 class="modal-title">
-          <span class="d-inline-flex align-items-center justify-content-center rounded-circle"
-            style="width:34px;height:34px;background:rgba(13,110,253,.10);">
-            <i class="bi bi-cash-coin text-primary"></i>
-          </span>
-          Collect Pending Payment
-        </h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
+      <div class="d-flex justify-content-between align-items-center">
 
-      <!-- Body -->
-      <div class="modal-body">
-        <input type="hidden" id="pm_member_id">
+        <!-- Profile -->
+        <div class="d-flex align-items-center gap-2">
+          {% if r.photo %}
+          <img src="{{ r.photo }}" width="50" height="50"
+               class="rounded-circle border"
+               style="object-fit:cover;">
+          {% else %}
+          <div class="rounded-circle border d-flex align-items-center justify-content-center"
+               style="width:50px;height:50px;background:#f1f3f5;font-weight:600;">
+            {{ r.name|slice:":1"|upper }}
+          </div>
+          {% endif %}
 
-        <!-- Member info (premium card) -->
-        <div class="pm-member mb-3">
-          <div class="pm-avatar" id="pm_avatar">M</div>
           <div>
-            <div class="name" id="pm_member_name">-</div>
-            <div class="phone" id="pm_member_phone">-</div>
-          </div>
-        </div>
-
-        <!-- Plan + dates + pending -->
-        <div class="pm-card mb-3">
-          <div class="label">Plan</div>
-          <div class="value" id="pm_plan_name">-</div>
-
-          <div class="row g-2 mt-2">
-            <div class="col-6">
-              <div class="label">Start</div>
-              <div class="value" id="pm_start_date">-</div>
+            <div class="fw-semibold" style="font-size:15px;">
+              {{ r.name }}
             </div>
-            <div class="col-6">
-              <div class="label">Expiry</div>
-              <div class="value" id="pm_expiry_date">-</div>
-            </div>
+            <small class="text-muted">
+              ID: {{ r.admission }}
+            </small>
           </div>
         </div>
 
-        <div class="pm-card pm-pending mb-3">
-          <div class="label">Pending Amount</div>
-          <div class="value">₹<span id="pm_balance">0.00</span></div>
+        <!-- Pending Amount Highlight -->
+        <div class="text-end">
+          <div class="fw-bold text-danger">
+            ₹{{ r.balance }}
+          </div>
+          <small class="text-muted">Pending</small>
         </div>
 
-        <!-- Error -->
-        <div class="pm-error mb-3 d-none" id="pm_error"></div>
+      </div>
 
-        <!-- Inputs -->
-        <div class="row g-2">
-          <div class="col-12 col-md-6">
-            <label class="form-label">Amount</label>
-            <input type="number" class="form-control" id="pm_amount" min="1" step="0.01" placeholder="Enter amount">
-          </div>
+      <hr class="my-2">
 
-          <div class="col-12 col-md-6">
-            <label class="form-label">Payment Mode</label>
-            <select class="form-select" id="pm_mode">
-              <option value="cash">Cash</option>
-              <option value="upi">UPI</option>
-            </select>
-          </div>
+      <!-- Details -->
+      <div class="small text-muted" style="line-height:1.6;">
+        <div><strong class="text-dark">📞</strong> {{ r.phone }}</div>
+        <div><strong class="text-dark">🏢</strong> {{ r.branch }}</div>
+        <div><strong class="text-dark">📦</strong> {{ r.plan }}</div>
+      </div>
+
+      <!-- Amount Breakdown -->
+      <div class="mt-2 d-flex justify-content-between small">
+        <div>
+          <span class="text-muted">Plan:</span><br>
+          <span class="fw-semibold">₹{{ r.plan_price }}</span>
         </div>
-
-        <div class="text-muted small mt-2">
-          Tip: enter only the balance amount to close pending.
+        <div>
+          <span class="text-muted">Paid:</span><br>
+          <span class="fw-semibold text-success">₹{{ r.paid }}</span>
+        </div>
+        <div>
+          <span class="text-muted">Balance:</span><br>
+          <span class="fw-bold text-danger pending-amount">₹{{ r.balance }}</span>
         </div>
       </div>
 
-      <!-- Footer -->
-      <div class="modal-footer">
-        <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="pm_save_btn">
-          <i class="bi bi-check2-circle me-1"></i> Save Payment
+      <!-- Actions -->
+      <div class="mt-3 d-flex gap-2">
+
+        <!-- View -->
+        <button class="btn btn-light flex-fill text-center"
+                onclick="openMemberDetails('{{ r.member_id }}')"
+                style="border-radius:10px;">
+          <i class="bi bi-eye fs-5"></i>
+          <div style="font-size:11px;">View</div>
         </button>
+
+        <!-- WhatsApp -->
+        <a class="btn btn-light flex-fill text-center"
+           target="_blank"
+           href="https://wa.me/91{{ r.phone }}?text=Hello%20{{ r.name }}%20👋%0A%0A₹{{ r.balance }}%20is%20pending.%20Please%20pay%20soon%20💪"
+           style="border-radius:10px;">
+          <i class="bi bi-whatsapp fs-5 text-success"></i>
+          <div style="font-size:11px;">WhatsApp</div>
+        </a>
+
+        <!-- Call -->
+        <a class="btn btn-light flex-fill text-center"
+           href="tel:+91{{ r.phone }}"
+           style="border-radius:10px;">
+          <i class="bi bi-telephone fs-5 text-primary"></i>
+          <div style="font-size:11px;">Call</div>
+        </a>
+
+        <!-- Collect -->
+        <button class="btn btn-light flex-fill text-center collect-btn"
+                data-member-id="{{ r.member_id }}"
+                style="border-radius:10px;">
+          <i class="bi bi-cash-stack fs-5 text-warning"></i>
+          <div style="font-size:11px;">Collect</div>
+        </button>
+
       </div>
 
     </div>
   </div>
+
+  {% empty %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-check-circle fs-3"></i>
+    <div class="mt-2">No pending payments 🎉</div>
+  </div>
+  {% endfor %}
+
 </div>
+
+</div>
+
+
 
 
 <!-- Member Details Modal -->
@@ -490,6 +666,10 @@
 
 
 
+
+
+
+
 <!-- WhatsApp Modal -->
 <!-- WhatsApp Modal -->
 <div class="modal fade" id="whatsappModal" tabindex="-1">
@@ -526,161 +706,69 @@
   </div>
 </div>
 
-
 <script>
 
-
-  //css
- 
-  document.addEventListener("DOMContentLoaded", function () {
-    let activeMenu = null;
+  // ================= FORM LOADER =================
+  document.querySelector("form").addEventListener("submit", function () {
+    document.getElementById("pageLoader").style.display = "flex";
+  });
   
+  // ================= DROPDOWN FIX =================
+  document.addEventListener("DOMContentLoaded", function () {
+
     document.querySelectorAll(".action-dropdown").forEach(function (dropdown) {
+  
       const button = dropdown.querySelector('[data-bs-toggle="dropdown"]');
       const menu = dropdown.querySelector(".action-dropdown-menu");
   
       if (!button || !menu) return;
   
       dropdown.addEventListener("show.bs.dropdown", function () {
-        activeMenu = menu;
-  
-        // Move menu to body
-        document.body.appendChild(menu);
-        menu.classList.add("floating-menu", "show");
   
         const rect = button.getBoundingClientRect();
-        const menuWidth = menu.offsetWidth;
-        const menuHeight = menu.offsetHeight;
   
         let top = rect.bottom + window.scrollY + 4;
-        let left = rect.right - menuWidth;
+        let left = rect.right - menu.offsetWidth;
   
-        // Prevent offscreen
-        if (left < 4) left = 4;
-        if (top + menuHeight > window.innerHeight + window.scrollY) {
-          top = rect.top + window.scrollY - menuHeight;
+        if (left < 8) left = 8;
+  
+        // prevent overflow bottom
+        if (top + menu.offsetHeight > window.innerHeight + window.scrollY) {
+          top = rect.top + window.scrollY - menu.offsetHeight;
         }
   
+        menu.style.position = "absolute";
         menu.style.top = `${top}px`;
         menu.style.left = `${left}px`;
+        menu.style.zIndex = "1050";
       });
   
       dropdown.addEventListener("hide.bs.dropdown", function () {
-        if (!activeMenu) return;
-  
-        activeMenu.classList.remove("show", "floating-menu");
-        activeMenu.style.top = "";
-        activeMenu.style.left = "";
-  
-        // Move back to dropdown container
-        dropdown.appendChild(activeMenu);
-        activeMenu = null;
+        menu.style.top = "";
+        menu.style.left = "";
       });
+  
     });
   
-    // Hide dropdown on scroll/resize
-    window.addEventListener("scroll", () => { if (activeMenu) activeMenu.classList.remove("show"); }, true);
-    window.addEventListener("resize", () => { if (activeMenu) activeMenu.classList.remove("show"); });
   });
-
-
-
-//css
-
-
+  
+  // ================= UTIL FUNCTIONS =================
   function safeText(v) {
     return (v === null || v === undefined || v === "") ? "-" : v;
   }
-
+  
   function parseMoney(val) {
     if (!val) return 0;
     return parseFloat(String(val).replace(/[₹,\s]/g, "")) || 0;
   }
-
+  
   function initials(name) {
     if (!name) return "M";
     const parts = name.trim().split(/\s+/);
     if (parts.length === 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
-
-  function setStatusBadge(label) {
-    const $el = $("#md_status");
-    $el.text(safeText(label));
-    $el.removeClass("bg-success bg-danger bg-warning bg-secondary text-dark");
-
-    const l = String(label || "").toLowerCase();
-    if (l.includes("active")) $el.addClass("bg-success");
-    else if (l.includes("expired")) $el.addClass("bg-danger");
-    else if (l.includes("expir")) $el.addClass("bg-warning text-dark");
-    else $el.addClass("bg-secondary");
-  }
-
-  function updateTopPending() {
-    let total = 0;
-    let count = 0;
-
-    $("#pendingTable tbody tr:visible").each(function () {
-      const $tds = $(this).find("td");
-      if ($tds.length < 8) return;
-
-      const pending = parseMoney($tds.eq(6).text());
-      if (pending > 0) {
-        total += pending;
-        count++;
-      }
-    });
-
-    $("#totalPendingTop").text(
-      total.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      })
-    );
-
-    const $countEl = $("#pendingMembersTop");
-    if ($countEl.length) $countEl.text(count);
-  }
-
-  function filterTable() {
-    const search = ($("#searchInput").val() || "").toLowerCase().trim();
-    const branchVal = $("#branchFilter").val() || "";
-
-    $("#pendingTable tbody tr").each(function () {
-      const $tds = $(this).find("td");
-      if ($tds.length < 8) return;
-
-      const memberText = $tds.eq(1).text().toLowerCase();
-      const rowBranch = $tds.eq(2).text().trim();
-
-      const matchSearch = !search || memberText.includes(search);
-      const matchBranch = !branchVal || rowBranch === branchVal;
-
-      $(this).toggle(matchSearch && matchBranch);
-    });
-
-    updateTopPending();
-  }
-
-  function buildBranchFilter() {
-    const branches = new Set();
-
-    $("#pendingTable tbody tr").each(function () {
-      const $tds = $(this).find("td");
-      if ($tds.length < 8) return;
-
-      const b = $tds.eq(2).text().trim();
-      if (b) branches.add(b);
-    });
-
-    const $branchFilter = $("#branchFilter");
-    $branchFilter.find("option:not(:first)").remove();
-
-    Array.from(branches).sort().forEach(function (b) {
-      $branchFilter.append(`<option value="${b}">${b}</option>`);
-    });
-  }
-
+  
   function formatMoney(value) {
     const num = parseFloat(value || 0);
     return num.toLocaleString("en-IN", {
@@ -689,13 +777,26 @@
     });
   }
   
+  function setStatusBadge(label) {
+    const $el = $("#md_status");
+    $el.text(safeText(label));
+    $el.removeClass("bg-success bg-danger bg-warning bg-secondary text-dark");
+  
+    const l = String(label || "").toLowerCase();
+    if (l.includes("active")) $el.addClass("bg-success");
+    else if (l.includes("expired")) $el.addClass("bg-danger");
+    else if (l.includes("expir")) $el.addClass("bg-warning text-dark");
+    else $el.addClass("bg-secondary");
+  }
+  
+  // ================= MEMBER DETAILS =================
   function openMemberDetails(memberId) {
     $.ajax({
       url: `/members/${memberId}/full-details/`,
       type: "GET",
       dataType: "json",
       success: function (data) {
-        // Member
+  
         $("#md_name").text(safeText(data.member.name));
         $("#md_phone").text(safeText(data.member.phone));
         setStatusBadge(data.member.status_label);
@@ -714,26 +815,19 @@
           `${safeText(data.member.start_date)} → ${safeText(data.member.expiry_date)}`
         );
   
-        // Summary
         $("#md_total_paid").text(formatMoney(data.summary.total_paid));
         $("#md_total_discount").text(formatMoney(data.summary.total_discount));
         $("#md_total_final").text(formatMoney(data.summary.total_final_amount));
         $("#md_total_pending").text(formatMoney(data.summary.total_pending));
         $("#md_last_payment").text(safeText(data.summary.last_payment_date));
   
-        // Payments table
-        const $tbody = $("#md_payments_tbody");
-        $tbody.empty();
+        const $tbody = $("#md_payments_tbody").empty();
   
         if (!data.payments || data.payments.length === 0) {
           $tbody.html(`<tr><td colspan="13" class="text-center text-muted">No payments</td></tr>`);
         } else {
           $.each(data.payments, function (idx, p) {
-            const givenBy = p.created_by_name
-              ? `${p.created_by_name}${p.created_by_role ? ` (${p.created_by_role})` : ""}`
-              : "-";
-  
-              $tbody.append(`
+            $tbody.append(`
               <tr>
                 <td>${idx + 1}</td>
                 <td>${safeText(p.invoice_no)}</td>
@@ -745,7 +839,7 @@
                 <td class="text-success fw-semibold">₹${formatMoney(p.amount)}</td>
                 <td>${safeText(p.payment_mode_label)}</td>
                 <td>${safeText(p.discount_reason || "-")}</td>
-                <td>${givenBy}</td>
+                <td>${safeText(p.created_by_name || "-")}</td>
                 <td>${safeText(p.coverage_start)}</td>
                 <td>${safeText(p.coverage_end)}</td>
               </tr>
@@ -753,47 +847,51 @@
           });
         }
   
-        // Show modal (Bootstrap 5)
-        const modalEl = document.getElementById("memberDetailsModal");
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        bootstrap.Modal.getOrCreateInstance(
+          document.getElementById("memberDetailsModal")
+        ).show();
       },
-      error: function (xhr, status, err) {
-        console.error("Error loading member details:", err);
+      error: function (xhr) {
         alert(xhr.responseJSON?.error || "Failed to load member details");
       }
     });
   }
-
+  
   window.openMemberDetails = openMemberDetails;
-
+  
+  // ================= MAIN =================
   $(function () {
-    const collectModalEl = document.getElementById("collectModal");
-    const collectModal = new bootstrap.Modal(collectModalEl);
-
+  
+    const collectModal = new bootstrap.Modal(document.getElementById("collectModal"));
+  
     function showError(msg) {
       $("#pm_error").text(msg).removeClass("d-none");
     }
-
+  
     function clearError() {
       $("#pm_error").addClass("d-none").text("");
     }
-
-    buildBranchFilter();
-    filterTable();
-
-    $("#searchInput").on("input", filterTable);
-    $("#branchFilter").on("change", filterTable);
-
-    $(document).on("click", ".collect-btn", function () {
+  
+    // ===== OPEN MODAL =====
+    $(document).on("click", ".collect-btn", function (e) {
+      e.preventDefault();
+    
       const memberId = $(this).data("member-id");
       clearError();
-
+    
+      // ✅ Proper Bootstrap way to close dropdown
+      document.querySelectorAll('.dropdown-toggle').forEach(btn => {
+        const instance = bootstrap.Dropdown.getInstance(btn);
+        if (instance) instance.hide();
+      });
+    
       $.get(`/pending-payment/${memberId}/data/`, function (res) {
+    
         if (!res.success) {
           alert(res.error || "Failed to load data");
           return;
         }
-
+    
         $("#pm_member_id").val(res.member.id);
         $("#pm_member_name").text(res.member.name);
         $("#pm_member_phone").text(res.member.phone);
@@ -803,30 +901,34 @@
         $("#pm_expiry_date").text(res.plan.expiry_date || "-");
         $("#pm_balance").text(Number(res.payments.balance || 0).toFixed(2));
         $("#pm_amount").val("").attr("max", res.payments.balance);
-
-        collectModal.show();
-      }).fail(function (xhr) {
-        alert(xhr.responseJSON?.error || "Error loading data");
+    
+        // ✅ small delay ensures dropdown fully closed
+        setTimeout(() => {
+          collectModal.show();
+        }, 120);
+    
       });
     });
-
+  
+    // ===== SAVE PAYMENT =====
     $("#pm_save_btn").on("click", function () {
+  
       clearError();
-
+  
       const memberId = $("#pm_member_id").val();
       const amount = parseFloat($("#pm_amount").val() || 0);
       const mode = $("#pm_mode").val();
       const $btn = $(this);
-
+  
       if (amount <= 0) {
         showError("Enter a valid amount.");
         return;
       }
-
+  
       $btn.prop("disabled", true).html(
         `<span class="spinner-border spinner-border-sm me-2"></span>Saving...`
       );
-
+  
       $.ajax({
         url: `/pending-payment/${memberId}/pay/`,
         type: "POST",
@@ -835,71 +937,40 @@
           payment_mode: mode,
           csrfmiddlewaretoken: $("input[name=csrfmiddlewaretoken]").first().val()
         },
+  
         success: function (res) {
           if (!res.success) {
             showError(res.error || "Failed");
             return;
           }
-
-          collectModal.hide();
-          
-
-          const $row = $(`.collect-btn[data-member-id="${memberId}"]`).closest("tr");
-          const currentPaid = parseMoney($row.find("td:eq(5)").text());
-          const currentPending = parseMoney($row.find("td:eq(6)").text());
-
-          const newPaid = currentPaid + amount;
-          const newPending = Math.max(0, currentPending - amount);
-
-          $row.find("td:eq(5)").text(`₹${newPaid.toFixed(2)}`);
-          $row.find("td:eq(6)").text(`₹${newPending.toFixed(2)}`);
-
-          if (newPending <= 0) {
-            $row.remove();
-          }
-
-          updateTopPending();
-
-
-
-
-          if ($("#pendingTable tbody tr td").length === 0 || $("#pendingTable tbody tr").length === 0) {
-            $("#pendingTable tbody").html(`
-              <tr>
-                <td colspan="8" class="text-center py-5 text-muted">
-                  <i class="bi bi-check-circle fs-4"></i>
-                  <div>No pending payments 🎉</div>
-                </td>
-              </tr>
-            `);
-          }
-
-          $("#whatsappOpenBtn").attr("href", res.whatsapp_url || "#");
-          $("#invoicePdfBtn").attr("href", `/payments/${res.invoice_no}/invoice-pdf/ `);
-
-
-           // Show modal
-          const whatsappModal = new bootstrap.Modal(document.getElementById("whatsappModal"));
-          whatsappModal.show();
-
-            setTimeout(function(){
-              location.reload()
-            },5000)
-      
+  
+          // ✅ Show loader + reload
+          $("#pageLoader").css("display", "flex");
+  
+          setTimeout(function () {
+            location.reload();
+          }, 700);
         },
+  
         error: function (xhr) {
           showError(xhr.responseJSON?.error || "Payment failed");
         },
+  
         complete: function () {
-          $btn.prop("disabled", false).html(`<i class="bi bi-check2-circle me-1"></i> Save Payment`);
+          $btn.prop("disabled", false).html(
+            `<i class="bi bi-check2-circle me-1"></i> Save Payment`
+          );
         }
       });
     });
+  
   });
-
+  
+  // ================= PAGE LOAD =================
   $(window).on("load", function () {
     $("#pageLoader").fadeOut(250);
   });
-</script>
+  
+  </script>
 
 {% endblock %}

@@ -687,48 +687,106 @@ def get_plan(request):
 @owner_or_trainer
 def member_list(request):
     
-    whatsapp_url =request.session.pop("whatsapp_url", None)
-    invoice_id =request.session.pop("invoice_id", None)
+    whatsapp_url = request.session.pop("whatsapp_url", None)
+    invoice_id = request.session.pop("invoice_id", None)
+
     gym = request.user.gym
     update_member_statuses(gym)
+
+    # 🔍 Get filters from request
+    search = request.GET.get("q", "")
+    branch = request.GET.get("branch", "")
+    status = request.GET.get("status", "")
+
     members = Member.objects.select_related(
         "branch", "plan"
-    ).filter(gym=gym,is_deleted=False).only("id", "name", "phone", "join_date", "expiry_date", "status", "photo", "branch__name", "plan__name").order_by("-id")
-    
+    ).filter(
+        gym=gym,
+        is_deleted=False
+    )
 
+    # 🔍 Search filter
+    if search:
+        members = members.filter(
+            Q(name__icontains=search) |
+            Q(phone__icontains=search) |
+            Q(admission_number__icontains=search)
+        )
+
+    # 🏢 Branch filter
+    if branch:
+        members = members.filter(branch__id=branch)
+
+    # 📊 Status filter
+    if status:
+        members = members.filter(status__iexact=status)
+
+    members = members.only(
+        "id", "name", "phone", "join_date",
+        "expiry_date", "status", "photo",
+        "branch__name", "plan__name","admission_number"
+    ).order_by("-id")
+
+    # 🔽 Send branches for dropdown
+    branches = gym.branches.all()
+    
     return render(request, "List_members.html", {
         "members": members,
+        "branches": branches,
+        "q": search,
+        "branch": branch,
+        "status": status,
         "whatsapp_url": whatsapp_url,
-        "invoice_id":invoice_id
-        
+        "invoice_id": invoice_id
     })
     
-@login_required
-@owner_or_trainer
-def plans(request):
-    gym = request.user.gym
-    plans = MembershipPlan.objects.filter(
-        branch__gym=gym
-    ).select_related("branch")
-    sets = []
-    for p in plans:
-        sets.append(p.is_active)
-        
-        print(p.is_active)
-        # print(p.name, p.is_active)
-    return render(request, "Planes.html",{"plans":plans})
 
 @login_required
 @owner_or_trainer
 def plans(request):
     gym = request.user.gym
+
+    search = request.GET.get("q")
+    branch = request.GET.get("branch")
+    status = request.GET.get("status")
+    duration = request.GET.get("duration")
+
     plans = MembershipPlan.objects.filter(
         branch__gym=gym
     ).select_related("branch")
-    add_new = Branch.objects.filter(gym__name=gym).values("id","name")
 
-    return render(request, "Planes.html",{"plans":plans , "add_new":add_new})
+    # Filters
+    if search:
+        plans = plans.filter(
+            Q(name__icontains=search) |
+            Q(branch__name__icontains=search)
+        )
 
+    if branch:
+        plans = plans.filter(branch_id=branch)
+
+    if status:
+        plans = plans.filter(is_active=(status == "Active"))
+
+    if duration:
+        plans = plans.filter(duration_days=duration)  # ✅ FIX FIELD NAME
+
+    # ✅ FIX: unique + ordered durations
+    durations = (
+        MembershipPlan.objects
+        .filter(branch__gym=gym)
+        .values_list("duration_days", flat=True)
+        .distinct()
+        .order_by("duration_days")
+    )
+    branches = gym.branches.all()
+    return render(request, "Planes.html", {
+        "plans": plans,
+        "durations": durations,
+        "branches":branches
+    })
+    
+    
 @login_required
 @owner_required
 def Add_plan(request):
@@ -1704,23 +1762,26 @@ def pending_payments_page(request):
     money = DecimalField(max_digits=10, decimal_places=2)
     zero = Value(Decimal("0.00"))
 
+    # Base queryset
     members_qs = (
         Member.objects
         .filter(gym=gym, plan__isnull=False)
         .select_related("plan", "branch")
     )
 
+    # ✅ SEARCH FILTER
     if q:
-        members = members.filter(
+        members_qs = members_qs.filter(
             Q(name__icontains=q) |
             Q(phone__icontains=q) |
             Q(admission_number__icontains=q)
         )
 
+    # ✅ BRANCH FILTER
     if branch_id:
         members_qs = members_qs.filter(branch_id=branch_id)
 
-    # ✅ Paid sum for CURRENT cycle only
+    # ✅ Paid Subquery
     paid_subq = (
         Payment.objects
         .filter(
@@ -1730,12 +1791,11 @@ def pending_payments_page(request):
             coverage_end=OuterRef("expiry_date"),
         )
         .values("member_id")
-        .annotate(s=Coalesce(Sum("amount"), zero, output_field=money))
+        .annotate(s=Coalesce(Sum("amount"), zero))
         .values("s")[:1]
     )
 
-    # ✅ Discount for CURRENT cycle (use MAX, not "latest")
-    # If your discount is only given once, MAX is correct.
+    # ✅ Discount Subquery
     discount_subq = (
         Payment.objects
         .filter(
@@ -1745,54 +1805,46 @@ def pending_payments_page(request):
             coverage_end=OuterRef("expiry_date"),
         )
         .values("member_id")
-        .annotate(d=Coalesce(Max("discount_amount"), zero, output_field=money))
+        .annotate(d=Coalesce(Max("discount_amount"), zero))
         .values("d")[:1]
     )
 
+    # ✅ Final calculations
     members_qs = (
         members_qs
         .annotate(
-            plan_price=Coalesce(F("plan__price"), zero, output_field=money),
-            paid_total=Coalesce(Subquery(paid_subq, output_field=money), zero, output_field=money),
-            discount_amount=Coalesce(Subquery(discount_subq, output_field=money), zero, output_field=money),
+            plan_price=Coalesce(F("plan__price"), zero),
+            paid_total=Coalesce(Subquery(paid_subq), zero),
+            discount_amount=Coalesce(Subquery(discount_subq), zero),
         )
         .annotate(
-            final_amount=Greatest(
-                ExpressionWrapper(F("plan_price") - F("discount_amount"), output_field=money),
-                zero,
-                output_field=money,
-            ),
-            balance=Greatest(
-                ExpressionWrapper(F("final_amount") - F("paid_total"), output_field=money),
-                zero,
-                output_field=money,
-            ),
+            final_amount=Greatest(F("plan_price") - F("discount_amount"), zero),
+            balance=Greatest(F("final_amount") - F("paid_total"), zero),
         )
         .filter(balance__gt=0)
         .order_by("-balance", "name")
     )
 
-    pending_list = []
-    for m in members_qs:
-        pending_list.append({
+    # Convert to template-friendly list
+    pending_list = [
+        {
             "member_id": m.id,
             "name": m.name,
             "phone": m.phone,
-            "admission":m.admission_number,
+            "admission": m.admission_number,
             "branch": m.branch.name if m.branch else "",
             "plan": m.plan.name if m.plan else "",
             "plan_price": m.plan_price,
             "paid": m.paid_total,
-            "discount_amount": m.discount_amount,
-            "final_amount": m.final_amount,
             "balance": m.balance,
             "photo": m.photo.url if m.photo else "",
-        })
+        }
+        for m in members_qs
+    ]
 
     branches = Branch.objects.filter(gym=gym).order_by("name")
 
     total_pending = sum((x["balance"] for x in pending_list), Decimal("0.00"))
-    pending_members_count = len(pending_list)
 
     return render(request, "pending_payments.html", {
         "pending_list": pending_list,
@@ -1800,7 +1852,6 @@ def pending_payments_page(request):
         "q": q,
         "branch_id": branch_id,
         "total_pending": total_pending,
-        "pending_members_count": pending_members_count,
     })
 
 from django.db import transaction

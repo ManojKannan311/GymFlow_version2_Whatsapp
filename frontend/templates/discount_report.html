@@ -100,7 +100,7 @@
   </div>
 
   <!-- Table -->
-  <div class="card shadow-sm border-0 rounded-3">
+  <div class="card shadow-sm border-0 rounded-3 d-none d-md-block">
     <div class="card-body table-responsive">
 
       <table class="table table-hover align-middle mb-0">
@@ -169,6 +169,100 @@
       </table>
 
     </div>
+  </div>
+
+  <div class="d-block d-md-none">
+
+    {% for p in rows %}
+    <div class="card mb-3 shadow-sm border-0 rounded-3">
+  
+      <div class="card-body p-3">
+  
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-start">
+          
+          <div>
+            <h6 class="fw-bold mb-1">{{ p.member.name }}</h6>
+            <small class="text-muted">{{ p.member.phone }}</small>
+          </div>
+  
+          <span class="text-muted small">
+            {{ p.payment_date|date:"Y-m-d" }}
+          </span>
+  
+        </div>
+  
+        <hr class="my-2">
+  
+        <!-- Info -->
+        <div class="small">
+  
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Branch</span>
+            <span>{{ p.member.branch.name }}</span>
+          </div>
+  
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Plan</span>
+            <span>
+              {% if p.plan %}
+                {{ p.plan.name }}
+              {% else %}
+                -
+              {% endif %}
+            </span>
+          </div>
+  
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Plan Price</span>
+            <span>₹{{ p.plan_price }}</span>
+          </div>
+  
+          <div class="d-flex justify-content-between">
+            <span class="text-muted text-danger">Discount</span>
+            <span class="fw-bold text-danger">₹{{ p.discount_amount }}</span>
+          </div>
+  
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Final</span>
+            <span class="fw-semibold">₹{{ p.final_amount }}</span>
+          </div>
+  
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Referral</span>
+            <span>{{ p.referral_name|default:"-" }}</span>
+          </div>
+  
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Reason</span>
+            <span>{{ p.discount_reason|default:"-" }}</span>
+          </div>
+  
+          <div class="d-flex justify-content-between">
+            <span class="text-muted">Given By</span>
+            <span>
+              {% if p.created_by %}
+                {{ p.created_by.first_name|default:p.created_by.username }}
+                <br>
+                <small class="text-muted">{{ p.created_by.role }}</small>
+              {% else %}
+                -
+              {% endif %}
+            </span>
+          </div>
+  
+        </div>
+  
+      </div>
+  
+    </div>
+  
+    {% empty %}
+    <div class="text-center text-muted py-5">
+      No discounts found for this filter.
+    </div>
+    {% endfor %}
+  
   </div>
 
 </div>

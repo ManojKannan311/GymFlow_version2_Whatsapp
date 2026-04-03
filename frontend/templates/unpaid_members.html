@@ -3,7 +3,7 @@
 {% block content %}
 
 <link rel="stylesheet" href="{% static 'css/modal_card.css' %}">
-<style>
+<!-- <style>
  /* Floating dropdown menu */
 .action-dropdown-menu.floating-menu {
   position: absolute !important;
@@ -18,7 +18,25 @@
 .card, .table-responsive, .card-body {
   overflow: visible !important;
 }
-  </style>
+
+
+/* Fix dropdown getting cut inside table */
+.table-responsive {
+  overflow-x: auto;
+  overflow-y: visible !important;
+}
+
+/* Allow dropdown to escape card */
+.card {
+  overflow: visible;
+}
+
+/* Ensure dropdown appears above everything */
+.action-dropdown-menu {
+  z-index: 1055;
+  min-width: 150px;
+}
+  </style> -->
 
 
 <div class="container-fluid">
@@ -91,111 +109,189 @@
     </div>
   </form>
   <!-- Table Card -->
-  <div class="card">
-    <div class="card-body mb-3">
-      <div class="table-responsive">
-  
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Name</th>
-              <th>Phone</th>
-              <th>Branch</th>
-              <th>Plan</th>
-              <th>Expiry</th>
-              <th>Days Left</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-  
-          <tbody>
-            {% for m in members %}
-            <tr>
-              <td>{{ forloop.counter }}</td>
-              <td>
-                <div class="d-flex align-items-center gap-2">
-                  {% if m.photo %}
-                  <img src="{{ m.photo.url }}" alt="{{ m.name }}" width="42" height="42" class="rounded-circle border" style="object-fit: cover;">
-                  {% else %}
-                  <div class="rounded-circle border d-flex align-items-center justify-content-center" style="width:42px;height:42px;background:#f1f3f5;font-weight:600;">
-                    {{ m.name|slice:":1"|upper }}
-                  </div>
-                  {% endif %}
-                  <div class="fw-semibold">{{ m.name }}-({{ m.admission_number }})</div>
-                </div>
-              </td>
-              <td>{{ m.phone }}</td>
-              <td>{{ m.branch.name }}</td>
-              <td>{% if m.plan %}{{ m.plan.name }}{% else %}-{% endif %}</td>
-              <td>{{ m.expiry_date }}</td>
-              <td>
-                {% if m.expiry_date < today %}
-                  <span class="text-danger fw-bold">Expired</span>
+  <!-- DESKTOP / TABLET VIEW -->
+<div class="card d-none d-md-block">
+  <div class="card-body mb-3">
+    <div class="table-responsive">
+
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Branch</th>
+            <th>Plan</th>
+            <th>Expiry</th>
+            <th>Days Left</th>
+            <th>Status</th>
+            <th class="text-center">Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for m in members %}
+          <tr>
+            <td>{{ forloop.counter }}</td>
+
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                {% if m.photo %}
+                <img src="{{ m.photo.url }}" width="42" height="42"
+                     class="rounded-circle border" style="object-fit: cover;">
                 {% else %}
-                  {{ m.expiry_date|timeuntil:today }}
-                {% endif %}
-              </td>
-              <td>
-                {% if m.expiry_date < today %}
-                  <span class="badge bg-danger">Expired</span>
-                {% else %}
-                  <span class="badge bg-warning text-dark">Expiring Soon</span>
-                {% endif %}
-              </td>
-  
-              <!-- Actions -->
-              <td class="text-center">
-                <div class="dropdown action-dropdown">
-                  <button class="btn btn-light btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-three-dots-vertical"></i>
-                  </button>
-  
-                  <ul class="dropdown-menu shadow-sm action-dropdown-menu">
-                    <li>
-                      <a class="dropdown-item" href="#" onclick="openMemberDetails('{{ m.id }}')">
-                        <i class="bi bi-eye me-2 text-secondary"></i> View
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" target="_blank" href="https://wa.me/91{{ m.phone }}?text=Hello%20{{ m.name }}%20👋,%20your%20gym%20membership%20%20expired%20on%20{{ m.expiry_date }}.%20Please%20renew%20to%20continue%20your%20training%20💪">
-                        <i class="bi bi-whatsapp me-2 text-success"></i> WhatsApp
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="tel:+91{{ m.phone }}">
-                        <i class="bi bi-telephone me-2 text-primary"></i> Call
-                      </a>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="#" onclick="openRenewModal('{{ m.id }}')">
-                        <i class="bi bi-arrow-repeat me-2 text-primary"></i> Renew
-                      </a>
-                    </li>
-                    {% if request.user.role == "ADMIN" %}
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                      <a class="dropdown-item text-danger delete-member-btn" href="#" data-id="{{ m.id }}">
-                        <i class="bi bi-trash me-2"></i> Delete
-                      </a>
-                    </li>
-                    {% endif %}
-                  </ul>
+                <div class="rounded-circle border d-flex align-items-center justify-content-center"
+                     style="width:42px;height:42px;background:#f1f3f5;">
+                  {{ m.name|slice:":1"|upper }}
                 </div>
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="9" class="text-center">No members found 🎉</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-  
-      </div>
+                {% endif %}
+                <div class="fw-semibold">
+                  {{ m.name }} ({{ m.admission_number }})
+                </div>
+              </div>
+            </td>
+
+            <td>{{ m.phone }}</td>
+            <td>{{ m.branch.name }}</td>
+            <td>{{ m.plan.name|default:"-" }}</td>
+            <td>{{ m.expiry_date }}</td>
+
+            <td>
+              {% if m.expiry_date < today %}
+                <span class="text-danger fw-bold">Expired</span>
+              {% else %}
+                {{ m.expiry_date|timeuntil:today }}
+              {% endif %}
+            </td>
+
+            <td>
+              {% if m.expiry_date < today %}
+                <span class="badge bg-danger">Expired</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Expiring Soon</span>
+              {% endif %}
+            </td>
+
+            <td class="text-center">
+              <div class="dropdown">
+                <button class="btn btn-light btn-sm"
+                        data-bs-toggle="dropdown"
+                        data-bs-boundary="viewport">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </button>
+
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li><a class="dropdown-item" href="#" onclick="openMemberDetails('{{ m.id }}')">View</a></li>
+                  <li><a class="dropdown-item" href="tel:+91{{ m.phone }}">Call</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="openRenewModal('{{ m.id }}')">Renew</a></li>
+                </ul>
+              </div>
+            </td>
+
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center">No members found 🎉</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
     </div>
   </div>
+</div>
+<!-- MOBILE VIEW -->
+<div class="d-block d-md-none">
+
+  {% for m in members %}
+  <div class="card mb-3 border-0 shadow-sm" style="border-radius:12px;">
+    <div class="card-body p-3">
+
+      <!-- Header -->
+      <div class="d-flex justify-content-between align-items-start">
+
+        <div class="d-flex align-items-center gap-2">
+          {% if m.photo %}
+          <img src="{{ m.photo.url }}" width="50" height="50"
+               class="rounded-circle border" style="object-fit: cover;">
+          {% else %}
+          <div class="rounded-circle border d-flex align-items-center justify-content-center"
+               style="width:50px;height:50px;background:#f1f3f5;font-weight:600;">
+            {{ m.name|slice:":1"|upper }}
+          </div>
+          {% endif %}
+
+          <div>
+            <div class="fw-semibold" style="font-size:15px;">
+              {{ m.name }}
+            </div>
+            <small class="text-muted">ID: {{ m.admission_number }}</small>
+          </div>
+        </div>
+
+        <!-- Status Badge -->
+        <div>
+          {% if m.expiry_date < today %}
+            <span class="badge bg-danger">Expired</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">Expiring</span>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <!-- Divider -->
+      <hr class="my-2">
+
+      <!-- Details -->
+      <div class="small text-muted" style="line-height:1.6;">
+        <div><strong class="text-dark">📞</strong> {{ m.phone }}</div>
+        <div><strong class="text-dark">🏢</strong> {{ m.branch.name }}</div>
+        <div><strong class="text-dark">📦</strong> {{ m.plan.name|default:"-" }}</div>
+        <div><strong class="text-dark">📅</strong> {{ m.expiry_date }}</div>
+      </div>
+
+      <!-- Actions -->
+      <div class="mt-3 d-flex justify-content-between gap-2">
+
+        <button class="btn btn-light flex-fill text-center"
+                onclick="openMemberDetails('{{ m.id }}')"
+                style="border-radius:10px;">
+          <i class="bi bi-eye fs-5"></i>
+          <div style="font-size:11px;">View</div>
+        </button>
+
+        <a class="btn btn-light flex-fill text-center"
+           href="tel:+91{{ m.phone }}"
+           style="border-radius:10px;">
+          <i class="bi bi-telephone fs-5 text-primary"></i>
+          <div style="font-size:11px;">Call</div>
+        </a>
+
+        <a class="btn btn-light flex-fill text-center"
+           target="_blank"
+           href="https://wa.me/91{{ m.phone }}?text=Hello%20{{ m.name }}%20👋%0A%0AThis%20is%20a%20friendly%20reminder%20from%20{{ request.user.gym.name|default:'our gym'|urlencode }}%20that%20your%20membership%20is%20either%20expired%20or%20expiring%20soon.%0AExpiry%20Date:%20{{ m.expiry_date|urlencode }}%0APlease%20renew%20it%20at%20your%20earliest%20to%20continue%20uninterrupted%20access.%20💪%0A%0AThank%20you!"
+           style="border-radius:10px;">
+          <i class="bi bi-whatsapp fs-5 text-success"></i>
+          <div style="font-size:11px;">WhatsApp</div>
+        </a>
+
+        <button class="btn btn-light flex-fill text-center"
+                onclick="openRenewModal('{{ m.id }}')"
+                style="border-radius:10px;">
+          <i class="bi bi-arrow-repeat fs-5 text-warning"></i>
+          <div style="font-size:11px;">Renew</div>
+        </button>
+
+      </div>
+
+    </div>
+  </div>
+  {% empty %}
+  <div class="text-center py-4">No members found 🎉</div>
+  {% endfor %}
+
+</div>
 
 </div>
 
@@ -443,7 +539,6 @@
 <script>
   
   //css
- 
     document.addEventListener("DOMContentLoaded", function () {
       let activeMenu = null;
     

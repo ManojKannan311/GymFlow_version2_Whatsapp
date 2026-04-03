@@ -24,8 +24,9 @@ SECRET_KEY = 'django-insecure-vvm-z6axqo9-$@d!^u@+tt(mhyuhknbow52cms23q4e-&=#b-)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+ALLOWED_HOSTS = ['*']
 
-ALLOWED_HOSTS = []
+
 AUTH_USER_MODEL = 'accounts.User'
 
 SESSION_COOKIE_AGE = 60 * 60 * 6
@@ -33,8 +34,14 @@ SESSION_COOKIE_AGE = 60 * 60 * 6
 SESSION_SAVE_EVERY_REQUEST = True 
 SESSION_COOKIE_HTTPONLY = True
 # SESSION_COOKIE_SECURE = True  # Only if using HTTPS
-CSRF_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# SESSION_COOKIE_SECURE = True
+# SECURE_BROWSER_XSS_FILTER = True
+# SECURE_CONTENT_TYPE_NOSNIFF = True
+# X_FRAME_OPTIONS = 'DENY'
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -57,7 +64,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 ROOT_URLCONF = 'gym_project.urls'
 
@@ -136,3 +146,4 @@ import os
 STATIC_URL = '/static/'
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+STATIC_ROOT = BASE_DIR / 'staticfiles'
