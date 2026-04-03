@@ -3,6 +3,13 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'css/modal_card.css' %}">
 <link rel="stylesheet" href="{% static 'css/add_member.css' %}">
+
+<style>
+    button, .btn {
+        touch-action: manipulation;
+    }
+</style>
+
 <div class="container-fluid mt-4">
     {% if messages %}
     {% for message in messages %}
@@ -148,15 +155,15 @@
                                 </a> -->
 
                                 <!-- Edit -->
-                                <a href="#" class="btn btn-sm btn-light border" title="Edit" hreflang="Edit"
-                                    data-bs-toggle="modal" data-bs-target="#Member_edit" data-id="{{ m.id }}"
-                                    id="dit-plan-btn">
+                                <a type="button" class="btn btn-sm btn-light border dit-plan-btn" title="Edit" hreflang="Edit"
+                                   data-id="{{ m.id }}"
+                                    >
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 {% if request.user.role == "ADMIN" %}
                                 <!-- Delete -->
                                 <a href="#" class="btn btn-sm btn-danger delete-member-btn" data-id="{{ m.id }}"
-                                    title="Delete" hreflang="Delete" id="delete-plan-btn">
+                                    title="Delete" hreflang="Delete" >
                                     <i class="bi bi-trash"></i>
                                 </a>
                                 {% endif %}
@@ -252,9 +259,8 @@
           </button>
   
           <!-- Edit -->
-          <button class="btn btn-light flex-fill text-center"
-                  data-bs-toggle="modal"
-                  data-bs-target="#Member_edit"
+          <button class="btn btn-light flex-fill text-center dit-plan-btn"
+                  
                   data-id="{{ m.id }}"
                   style="border-radius:10px;">
             <i class="bi bi-pencil fs-5 text-primary"></i>
@@ -774,7 +780,7 @@
 
 <script src="{% static 'Js/datatable.js' %}"></script>
 <script>
-    $(document).on("click", "#delete-plan-btn", function (e) {
+    $(document).on("click", ".delete-member-btn", function (e) {
 
         let planId = $(this).data("id");
         console.log(planId)
@@ -797,34 +803,40 @@
     });
 
     // OPEN EDIT MODAL + LOAD DATA
-$(document).on("click", "#dit-plan-btn", function () {
-
-    let memberId = $(this).data("id");
-
-    $.get(`/member/${memberId}/data/`, function (data) {
+    $(document).on("click", ".dit-plan-btn", function (e) {
+        e.preventDefault();
+    
+        const memberId = $(this).data("id");
+    
+        console.log("CLICK OK:", memberId); // DEBUG
+    
         const modalEl = document.getElementById('Member_edit');
         const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
-
-        // Set values
-        $("#save_member_id").val(data.ids);
-        $("input[name='member_name']").val(data.name);
-        $("input[name='Phone_number']").val(data.phone);
-        $("#edit_dob").val(data.dob);
-
-        // ✅ Reset base64 (important)
-        $("#edit_captured_photo").val("");
-
-        // ✅ Set image preview
-        if (data.photo) {
-            $("#edit_photo_preview").attr("src", data.photo);
-        } else {
-            $("#edit_photo_preview").attr("src", "/static/img/user-placeholder.png");
-        }
-
+    
+        modal.show();
+    
+        $.get(`/member/${memberId}/data/`)
+            .done(function (data) {
+    
+                console.log("DATA:", data); // DEBUG
+    
+                $("#save_member_id").val(data.ids || "");
+                $("input[name='member_name']").val(data.name || "");
+                $("input[name='Phone_number']").val(data.phone || "");
+                $("#edit_dob").val(data.dob || "");
+    
+                $("#edit_captured_photo").val("");
+    
+                $("#edit_photo_preview").attr(
+                    "src",
+                    data.photo || "/static/img/user-placeholder.png"
+                );
+    
+            })
+            .fail(function () {
+                alert("Failed to load member data");
+            });
     });
-
-});
 
 
 // SUBMIT FORM (AJAX)
